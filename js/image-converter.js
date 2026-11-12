@@ -1,3 +1,4 @@
+
 // js/image-converter.js
 
 window.ImageConverter = {
@@ -30,7 +31,7 @@ window.ImageConverter = {
     canvas.width = image.naturalWidth;
     canvas.height = image.naturalHeight;
 
-    // JPEG系は透過に対応しないため白背景にする（jpgやjpegのどちらを指定されても対応）
+    // JPEGは透過に対応しないため白背景にする
     if (format === "jpg" || format === "jpeg") {
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, canvas.width, canvas.height);
@@ -69,7 +70,6 @@ window.ImageConverter = {
       });
     }
 
-    // MIMEタイプの定義（jpgに一本化しつつ、念のためjpegも残しておく）
     const mimeTypes = {
       jpg: "image/jpeg",
       jpeg: "image/jpeg",

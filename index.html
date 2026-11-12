@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -22,7 +23,6 @@
     <button class="tab" data-page="zip">ZIP圧縮</button>
   </nav>
 
-  <!-- 1. ファイル形式変換 -->
   <section id="convert" class="page">
     <h1>ファイル形式変換</h1>
     <p>ファイルを追加して変換先を選択してください。</p>
@@ -34,7 +34,7 @@
       <input type="file" id="fileInput" multiple>
     </label>
 
-    <div id="fileName" class="file-name-display">ファイルが選択されていません</div>
+    <div id="fileName">ファイルが選択されていません</div>
 
     <h3>★ お気に入り</h3>
     <div id="favoriteFormats" class="format-grid"></div>
@@ -52,74 +52,30 @@
     <div id="status"></div>
   </section>
 
-  <!-- 2. PDF結合 -->
   <section id="merge" class="page hidden">
     <h1>PDF結合</h1>
-    <p>結合したい複数のPDFファイルを追加してください。</p>
-
-    <label class="upload-area" for="mergeInput">
-      <div class="upload-icon">＋</div>
-      <h3>PDFファイルを選択</h3>
-      <p>ここにPDFファイルをドラッグ＆ドロップ（複数可）</p>
-      <input type="file" id="mergeInput" accept=".pdf" multiple>
-    </label>
-
-    <div id="mergeFileName" class="file-name-display">ファイルが選択されていません</div>
-
-    <button id="mergeBtn" class="main-btn" disabled>PDFを結合</button>
+    <input type="file" id="mergeInput" accept=".pdf" multiple>
+    <button id="mergeBtn" class="main-btn">PDFを結合</button>
   </section>
 
-  <!-- 3. PDF分割 -->
   <section id="split" class="page hidden">
     <h1>PDF分割</h1>
-    <p>分割したいPDFファイルを1つ選択してください。</p>
-
-    <label class="upload-area" for="splitInput">
-      <div class="upload-icon">＋</div>
-      <h3>PDFファイルを選択</h3>
-      <p>ここにPDFファイルをドラッグ＆ドロップ</p>
-      <input type="file" id="splitInput" accept=".pdf">
-    </label>
-
-    <div id="splitFileName" class="file-name-display">ファイルが選択されていません</div>
-
-    <div class="split-options" style="margin: 20px 0; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-      <label>分割方法：
-        <select id="splitMode" style="padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
-          <option value="each">1ページずつ分割</option>
-          <option value="range">ページ範囲を指定</option>
-        </select>
-      </label>
-      <input id="pageRange" placeholder="例：1-3, 4-6" style="padding: 8px; border-radius: 8px; border: 1px solid #ddd; width: 160px;">
-    </div>
-
-    <button id="splitBtn" class="main-btn" disabled>PDFを分割</button>
+    <input type="file" id="splitInput" accept=".pdf">
+    <select id="splitMode">
+      <option value="each">1ページずつ分割</option>
+      <option value="range">ページ範囲を指定</option>
+    </select>
+    <input id="pageRange" placeholder="例：1-3, 4-6">
+    <button id="splitBtn" class="main-btn">PDFを分割</button>
   </section>
 
-  <!-- 4. ZIP圧縮 -->
   <section id="zip" class="page hidden">
     <h1>ZIP圧縮</h1>
-    <p>圧縮したいファイルを選択してください。</p>
-
-    <label class="upload-area" for="zipInput">
-      <div class="upload-icon">＋</div>
-      <h3>ファイルを選択</h3>
-      <p>ここにファイルをドラッグ＆ドロップ（複数可）</p>
-      <input type="file" id="zipInput" multiple>
-    </label>
-
-    <div id="zipFileName" class="file-name-display">ファイルが選択されていません</div>
-
-    <div style="margin: 20px 0;">
-      <label>ZIPファイル名: 
-        <input id="zipName" value="archive.zip" style="padding: 8px; border-radius: 8px; border: 1px solid #ddd; margin-left: 5px;">
-      </label>
-    </div>
-
-    <button id="zipBtn" class="main-btn" disabled>ZIPを作成</button>
+    <input type="file" id="zipInput" multiple>
+    <input id="zipName" value="archive.zip">
+    <button id="zipBtn" class="main-btn">ZIPを作成</button>
   </section>
 
-  <!-- 5. お気に入り設定 -->
   <section id="settings" class="page hidden">
     <h1>お気に入り設定</h1>
     <div id="favoriteSettings"></div>
@@ -127,13 +83,9 @@
 
 </main>
 
-<!-- 外部ライブラリ -->
 <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
-<!-- 自作スクリプト -->
 <script src="js/image-converter.js"></script>
-<script src="js/pdf-handler.js"></script>
 <script src="js/app.js"></script>
 
 </body>
