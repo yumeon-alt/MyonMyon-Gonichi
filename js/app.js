@@ -1,8 +1,7 @@
-
 // js/app.js
 
 const formats = [
-  "jpg", "jpeg", "png", "gif",
+  "jpg", "png", "gif",
   "webp", "bmp", "tiff", "svg",
   "ico", "raw", "avif", "heic", "pdf"
 ];
@@ -25,16 +24,20 @@ document.querySelectorAll(".tab").forEach(tab => {
   });
 });
 
-function showPage(page) {
-  document.querySelectorAll(".page").forEach(element => {
-    element.classList.remove("active");
+function showPage(pageId) {
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.page === pageId);
   });
 
-  const target = $(page);
-  if (target) target.classList.add("active");
-
-  document.querySelectorAll(".tab").forEach(tab => {
-    tab.classList.toggle("active", tab.dataset.page === page);
+  // すべてのセクションページを表示/非表示切り替え
+  document.querySelectorAll(".page").forEach(element => {
+    if (element.id === pageId) {
+      element.classList.remove("hidden");
+      element.classList.add("active");
+    } else {
+      element.classList.add("hidden");
+      element.classList.remove("active");
+    }
   });
 }
 
@@ -78,14 +81,12 @@ function setupDragAndDrop() {
 
   if (!input) return;
 
-  // input自体ではなく、アップロードエリアを取得
   const uploadArea =
     input.closest(".upload-area") ||
     input.parentElement;
 
   if (!uploadArea) return;
 
-  // ファイルをドロップしたとき
   uploadArea.addEventListener("dragover", event => {
     event.preventDefault();
     uploadArea.classList.add("drag-over");
@@ -107,7 +108,6 @@ function setupDragAndDrop() {
 
     displayFiles(files);
 
-    // inputにもファイルを反映
     try {
       const transfer = new DataTransfer();
       files.forEach(file => transfer.items.add(file));
@@ -194,14 +194,13 @@ function renderFormats() {
 if ($("otherBtn")) {
   $("otherBtn").addEventListener("click", () => {
     const area = $("otherFormats");
-
     const isHidden = area.hidden;
 
     area.hidden = !isHidden;
 
     $("otherBtn").textContent = isHidden
       ? "その他の形式を閉じる"
-      : "その他の形式を表示";
+      : "その他の形式を表示 ▼";
   });
 }
 
@@ -251,7 +250,7 @@ function setStatus(message, isError = false) {
   status.style.color = isError ? "#d94848" : "#555";
 }
 
-// 変換
+// 1. ファイル変換処理
 if ($("convertBtn")) {
   $("convertBtn").addEventListener("click", async () => {
     if (selectedFiles.length === 0) {
@@ -309,6 +308,139 @@ if ($("convertBtn")) {
     }
   });
 }
+
+
+// ==========================================
+// 2. PDF結合処理の追加
+// ==========================================
+const mergeBtn = $("mergeBtn");
+const mergeInput = $("mergeInput");
+
+if (mergeBtn) {
+  mergeBtn.addEventListener("click", async () => {
+    const files = mergeInput.files;
+    if (!files || files.length < 2) {
+      alert("結合するには2つ以上のPDFファイルを選択してください。");
+      return;
+    }
+
+    if (!window.PdfHandler) {
+      alert("PDF処理プログラムが読み込まれていません。");
+      return;
+    }
+
+    try {
+      mergeBtn.disabled = true;
+      mergeBtn.textContent = "結合中...";
+
+      const mergedBlob = await window.PdfHandler.merge(files);
+      window.PdfHandler.download(mergedBlob, "merged_document.pdf");
+
+      alert("PDFの結合が完了しました！");
+    } catch (error) {
+      console.error(error);
+      alert(`エラーが発生しました: ${error.message}`);
+    } finally {
+      mergeBtn.disabled = false;
+      mergeBtn.textContent = "PDFを結合";
+    }
+  });
+}
+
+
+// ==========================================
+// 3. PDF分割処理の追加
+// ==========================================
+const splitBtn = $("splitBtn");
+const splitInput = $("splitInput");
+const splitMode = $("splitMode");
+const pageRange = $("pageRange");
+
+if (splitBtn) {
+  splitBtn.addEventListener("click", async () => {
+    const file = splitInput.files[0];
+    if (!file) {
+      alert("分割するPDFファイルを選択してください。");
+      return;
+    }
+
+    if (!window.PdfHandler) {
+      alert("PDF処理プログラムが読み込まれていません。");
+      return;
+    }
+
+    try {
+      splitBtn.disabled = true;
+      splitBtn.textContent = "分割中...";
+
+      const mode = splitMode ? splitMode.value : "each";
+      const rangeText = pageRange ? pageRange.value : "";
+
+      const resultFiles = await window.PdfHandler.split(file, mode, rangeText);
+
+      for (const item of resultFiles) {
+        window.PdfHandler.download(item.blob, item.name);
+      }
+
+      alert("PDFの分割が完了しました！");
+    } catch (error) {
+      console.error(error);
+      alert(`エラーが発生しました: ${error.message}`);
+    } finally {
+      splitBtn.disabled = false;
+      splitBtn.textContent = "PDFを分割";
+    }
+  });
+}
+
+
+// ==========================================
+// 4. ZIP圧縮処理の追加
+// ==========================================
+const zipBtn = $("zipBtn");
+const zipInput = $("zipInput");
+const zipNameInput = $("zipName");
+
+if (zipBtn) {
+  zipBtn.addEventListener("click", async () => {
+    const files = zipInput.files;
+    if (!files || files.length === 0) {
+      alert("圧縮するファイルを1つ以上選択してください。");
+      return;
+    }
+
+    if (!window.JSZip) {
+      alert("ZIPライブラリを読み込めませんでした。");
+      return;
+    }
+
+    try {
+      zipBtn.disabled = true;
+      zipBtn.textContent = "圧縮中...";
+
+      const zip = new JSZip();
+
+      for (const file of files) {
+        const arrayBuffer = await file.arrayBuffer();
+        zip.file(file.name, arrayBuffer);
+      }
+
+      const content = await zip.generateAsync({ type: "blob" });
+      const zipName = (zipNameInput && zipNameInput.value.trim()) ? zipNameInput.value.trim() : "archive.zip";
+
+      window.PdfHandler.download(content, zipName);
+
+      alert("ZIPの作成が完了しました！");
+    } catch (error) {
+      console.error(error);
+      alert(`エラーが発生しました: ${error.message}`);
+    } finally {
+      zipBtn.disabled = false;
+      zipBtn.textContent = "ZIPを作成";
+    }
+  });
+}
+
 
 // 初期化
 renderFormats();
