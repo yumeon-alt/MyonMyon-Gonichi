@@ -1,0 +1,258 @@
+
+/* 全体 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, "Noto Sans JP", sans-serif;
+  background: #f7f7fb;
+  color: #252535;
+}
+
+/* ヘッダー */
+.header {
+  height: 75px;
+  background: #eeedf8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 7%;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.logo span {
+  color: #6559bb;
+}
+
+.settings-btn {
+  border: none;
+  background: transparent;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+/* メイン */
+.container {
+  max-width: 1050px;
+  margin: 35px auto;
+  padding: 0 20px;
+}
+
+/* タブ */
+.tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 30px;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 15px 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  color: #777;
+}
+
+.tab.active {
+  color: #6559bb;
+  border-bottom: 3px solid #6559bb;
+  font-weight: bold;
+}
+
+/* ページ */
+.page {
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px #2525350c;
+}
+
+.page h1 {
+  margin-bottom: 10px;
+  font-size: 24px;
+}
+
+.page p {
+  color: #888;
+  margin-bottom: 25px;
+}
+
+/* ページ切り替え */
+.page.hidden,
+[hidden] {
+  display: none !important;
+}
+
+.page.active {
+  display: block;
+}
+
+/* アップロードエリア */
+.upload-area {
+  border: 2px dashed #c9c5df;
+  border-radius: 14px;
+  padding: 45px 20px;
+  text-align: center;
+  display: block;
+  cursor: pointer;
+  background: #fcfbff;
+  transition: 0.2s;
+}
+
+.upload-area:hover,
+.upload-area.drag-over {
+  border-color: #6559bb;
+  background: #eeeaff;
+  transform: scale(1.01);
+}
+
+.upload-icon {
+  font-size: 45px;
+  color: #6559bb;
+}
+
+.upload-area h3 {
+  margin: 10px;
+}
+
+/* ファイル選択 */
+.upload-area input {
+  display: none;
+}
+
+#fileName,
+#fileList {
+  margin: 15px 0;
+  font-size: 13px;
+  color: #777;
+  overflow-wrap: anywhere;
+}
+
+/* 形式一覧 */
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 15px 0;
+}
+
+/* 形式ボタン */
+.format-button {
+  position: relative;
+  padding: 16px 8px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #252535;
+}
+
+.format-button:hover {
+  border-color: #6559bb;
+}
+
+.format-button.selected {
+  border: 2px solid #6559bb;
+  color: #6559bb;
+  background: #f6f4ff;
+}
+
+/* お気に入り */
+.favorite-star {
+  color: #d5a52b;
+  cursor: pointer;
+  margin-left: 8px;
+  user-select: none;
+}
+
+/* その他の形式 */
+.other-btn {
+  width: 100%;
+  padding: 14px;
+  background: #f7f6fc;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.other-btn:hover {
+  background: #eeebfa;
+}
+
+/* 変換ボタン */
+.main-btn {
+  width: 100%;
+  padding: 16px;
+  margin-top: 25px;
+  background: #6559bb;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.main-btn:hover:not(:disabled) {
+  background: #51459f;
+}
+
+.main-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+/* ステータス */
+#status {
+  margin-top: 15px;
+  color: #16845b;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* 設定 */
+.setting-format {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px;
+  padding: 10px;
+  background: #f7f6fc;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* スマートフォン */
+@media (max-width: 600px) {
+  .container {
+    margin: 15px auto;
+    padding: 0 12px;
+  }
+
+  .page {
+    padding: 18px;
+  }
+
+  .format-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .header {
+    padding: 0 18px;
+  }
+
+  .tab {
+    padding: 13px 15px;
+  }
+}
