@@ -1,4 +1,5 @@
 
+/* 全体 */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -11,6 +12,7 @@ body {
   color: #252535;
 }
 
+/* ヘッダー */
 .header {
   height: 75px;
   background: #eeedf8;
@@ -36,12 +38,14 @@ body {
   cursor: pointer;
 }
 
+/* メイン */
 .container {
   max-width: 1050px;
   margin: 35px auto;
   padding: 0 20px;
 }
 
+/* タブ */
 .tabs {
   display: flex;
   gap: 10px;
@@ -65,6 +69,7 @@ body {
   font-weight: bold;
 }
 
+/* ページ */
 .page {
   background: white;
   padding: 30px;
@@ -82,6 +87,17 @@ body {
   margin-bottom: 25px;
 }
 
+/* ページ切り替え */
+.page.hidden,
+[hidden] {
+  display: none !important;
+}
+
+.page.active {
+  display: block;
+}
+
+/* アップロードエリア */
 .upload-area {
   border: 2px dashed #c9c5df;
   border-radius: 14px;
@@ -90,11 +106,14 @@ body {
   display: block;
   cursor: pointer;
   background: #fcfbff;
+  transition: 0.2s;
 }
 
-.upload-area:hover {
+.upload-area:hover,
+.upload-area.drag-over {
   border-color: #6559bb;
-  background: #f7f5ff;
+  background: #eeeaff;
+  transform: scale(1.01);
 }
 
 .upload-icon {
@@ -106,16 +125,20 @@ body {
   margin: 10px;
 }
 
+/* ファイル選択 */
 .upload-area input {
   display: none;
 }
 
+#fileName,
 #fileList {
   margin: 15px 0;
   font-size: 13px;
   color: #777;
+  overflow-wrap: anywhere;
 }
 
+/* 形式一覧 */
 .format-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -123,7 +146,8 @@ body {
   margin: 15px 0;
 }
 
-.format {
+/* 形式ボタン */
+.format-button {
   position: relative;
   padding: 16px 8px;
   background: white;
@@ -131,22 +155,28 @@ body {
   border-radius: 10px;
   cursor: pointer;
   font-weight: bold;
+  color: #252535;
 }
 
-.format.selected {
+.format-button:hover {
+  border-color: #6559bb;
+}
+
+.format-button.selected {
   border: 2px solid #6559bb;
   color: #6559bb;
   background: #f6f4ff;
 }
 
-.star {
-  position: absolute;
-  right: 7px;
-  top: 5px;
+/* お気に入り */
+.favorite-star {
   color: #d5a52b;
   cursor: pointer;
+  margin-left: 8px;
+  user-select: none;
 }
 
+/* その他の形式 */
 .other-btn {
   width: 100%;
   padding: 14px;
@@ -156,6 +186,11 @@ body {
   cursor: pointer;
 }
 
+.other-btn:hover {
+  background: #eeebfa;
+}
+
+/* 変換ボタン */
 .main-btn {
   width: 100%;
   padding: 16px;
@@ -169,21 +204,37 @@ body {
   cursor: pointer;
 }
 
+.main-btn:hover:not(:disabled) {
+  background: #51459f;
+}
+
 .main-btn:disabled {
   opacity: .4;
   cursor: not-allowed;
 }
 
-.hidden {
-  display: none !important;
-}
-
+/* ステータス */
 #status {
   margin-top: 15px;
   color: #16845b;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-@media(max-width:600px) {
+/* 設定 */
+.setting-format {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px;
+  padding: 10px;
+  background: #f7f6fc;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* スマートフォン */
+@media (max-width: 600px) {
   .container {
     margin: 15px auto;
     padding: 0 12px;
@@ -199,5 +250,9 @@ body {
 
   .header {
     padding: 0 18px;
+  }
+
+  .tab {
+    padding: 13px 15px;
   }
 }
