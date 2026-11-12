@@ -1,4 +1,6 @@
 
+// js/app.js
+
 const formats = [
   "jpg", "jpeg", "png", "gif",
   "webp", "bmp", "tiff", "svg",
@@ -16,7 +18,7 @@ let selectedFiles = [];
 
 const $ = id => document.getElementById(id);
 
-// タブ切り替え
+// ページ切り替え
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
     showPage(tab.dataset.page);
@@ -24,14 +26,15 @@ document.querySelectorAll(".tab").forEach(tab => {
 });
 
 function showPage(page) {
-  document.querySelectorAll(".page").forEach(p => {
-    p.classList.add("hidden");
+  document.querySelectorAll(".page").forEach(element => {
+    element.classList.remove("active");
   });
 
-  document.getElementById(page).classList.remove("hidden");
+  const target = $(page);
+  if (target) target.classList.add("active");
 
-  document.querySelectorAll(".tab").forEach(t => {
-    t.classList.toggle("active", t.dataset.page === page);
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.page === page);
   });
 }
 
@@ -42,16 +45,17 @@ $("settingsBtn").onclick = () => {
 };
 
 // ファイル選択
-$("fileInput").addEventListener("change", e => {
-  selectedFiles = [...e.target.files];
+$("fileInput").addEventListener("change", event => {
+  selectedFiles = Array.from(event.target.files);
 
-  $("fileList").textContent = selectedFiles.length
-    ? selectedFiles.map(f => f.name).join(" / ")
-    : "ファイル未選択";
+  $("fileName").textContent = selectedFiles.length
+    ? selectedFiles.map(file => file.name).join("、")
+    : "ファイルが選択されていません";
 
-  $("convertBtn").disabled = !selectedFiles.length;
+  $("convertBtn").disabled = selectedFiles.length === 0;
 
   renderFormats();
+  setStatus("");
 });
 
 // お気に入り保存
@@ -65,91 +69,173 @@ function saveFavorites() {
   renderSettings();
 }
 
-// 形式ボタン作成
+// 形式ボタンを作成
 function createFormatButton(format) {
   const button = document.createElement("button");
-  button.className = "format";
-  button.innerHTML = `
-    .${format.toUpperCase()}
-    <span class="star">
-      ${favorites.includes(format) ? "★" : "☆"}
-    </span>
-  `;
+  button.className = "format-button";
 
-  button.onclick = e => {
-    if (e.target.classList.contains("star")) {
-      favorites = favorites.includes(format)
-        ? favorites.filter(f => f !== format)
-        : [...favorites, format];
+  if (selectedFormat === format) {
+    button.classList.add("selected");
+  }
 
-      saveFavorites();
-      return;
+  const name = document.createElement("span");
+  name.textContent = format.toUpperCase();
+
+  const star = document.createElement("span");
+  star.className = "favorite-star";
+  star.textContent = favorites.includes(format) ? "★" : "☆";
+  star.title = "お気に入りに登録";
+
+  star.addEventListener("click", event => {
+    event.stopPropagation();
+
+    if (favorites.includes(format)) {
+      favorites = favorites.filter(item => item !== format);
+    } else {
+      favorites.push(format);
     }
 
+    saveFavorites();
+  });
+
+  button.append(name, star);
+
+  button.addEventListener("click", () => {
     selectedFormat = format;
     renderFormats();
-  };
-
-  button.classList.toggle(
-    "selected",
-    selectedFormat === format
-  );
+  });
 
   return button;
 }
 
-// 形式表示
+// 形式一覧
 function renderFormats() {
-  const fav = $("favoriteFormats");
-  const other = $("otherFormats");
+  const favoriteArea = $("favoriteFormats");
+  const otherArea = $("otherFormats");
 
-  fav.innerHTML = "";
-  other.innerHTML = "";
+  favoriteArea.innerHTML = "";
+  otherArea.innerHTML = "";
 
   favorites.forEach(format => {
-    fav.appendChild(createFormatButton(format));
+    favoriteArea.appendChild(createFormatButton(format));
   });
 
-  formats.filter(f => !favorites.includes(f)).forEach(format => {
-    other.appendChild(createFormatButton(format));
-  });
+  formats
+    .filter(format => !favorites.includes(format))
+    .forEach(format => {
+      otherArea.appendChild(createFormatButton(format));
+    });
 }
 
-// その他の形式
+// その他の形式を表示
 $("otherBtn").onclick = () => {
-  $("otherFormats").classList.toggle("hidden");
+  const area = $("otherFormats");
+  area.hidden = !area.hidden;
 
-  $("otherBtn").textContent =
-    $("otherFormats").classList.contains("hidden")
-      ? "その他の形式を見る ▼"
-      : "その他の形式を閉じる ▲";
+  $("otherBtn").textContent = area.hidden
+    ? "その他の形式を表示"
+    : "閉じる";
 };
 
-// 設定画面
+// 設定画面のお気に入り一覧
 function renderSettings() {
-  $("favoriteSettings").innerHTML = "";
+  const area = $("favoriteSettings");
+  if (!area) return;
+
+  area.innerHTML = "";
 
   formats.forEach(format => {
-    const button = document.createElement("button");
-    button.className = "format";
+    const label = document.createElement("label");
+    label.className = "setting-format";
 
-    button.textContent =
-      `${favorites.includes(format) ? "★" : "☆"} .${format}`;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = favorites.includes(format);
 
-    button.style.margin = "5px";
-
-    button.onclick = () => {
-      favorites = favorites.includes(format)
-        ? favorites.filter(f => f !== format)
-        : [...favorites, format];
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
+        if (!favorites.includes(format)) favorites.push(format);
+      } else {
+        favorites = favorites.filter(item => item !== format);
+      }
 
       saveFavorites();
-    };
+    });
 
-    $("favoriteSettings").appendChild(button);
+    const text = document.createElement("span");
+    text.textContent = format.toUpperCase();
+
+    label.append(checkbox, text);
+    area.appendChild(label);
   });
 }
+
+// ステータス表示
+function setStatus(message, isError = false) {
+  const status = $("status");
+  status.textContent = message;
+  status.style.color = isError ? "#d94848" : "#555";
+}
+
+// 画像変換
+$("convertBtn").addEventListener("click", async () => {
+  if (selectedFiles.length === 0) {
+    setStatus("先にファイルを選択してください。", true);
+    return;
+  }
+
+  if (!selectedFormat) {
+    setStatus("変換先の形式を選択してください。", true);
+    return;
+  }
+
+  if (!window.ImageConverter) {
+    setStatus("変換プログラムを読み込めませんでした。", true);
+    return;
+  }
+
+  const button = $("convertBtn");
+  button.disabled = true;
+
+  let success = 0;
+  const errors = [];
+
+  setStatus("変換しています...");
+
+  for (const file of selectedFiles) {
+    try {
+      const blob = await ImageConverter.convert(
+        file,
+        selectedFormat
+      );
+
+      const originalName = file.name.replace(/\.[^.]+$/, "");
+      const outputName = `${originalName}.${selectedFormat}`;
+
+      ImageConverter.download(blob, outputName);
+      success++;
+
+      // 複数ファイルの連続ダウンロードを少し間隔を空ける
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+    } catch (error) {
+      errors.push(`${file.name}: ${error.message}`);
+    }
+  }
+
+  button.disabled = false;
+
+  if (errors.length === 0) {
+    setStatus(`${success}個のファイルを変換しました！`);
+  } else {
+    setStatus(
+      `${success}個成功、${errors.length}個失敗。\n${errors.join("\n")}`,
+      true
+    );
+  }
+});
 
 // 初期表示
 renderFormats();
 renderSettings();
+$("convertBtn").disabled = true;
