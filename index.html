@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Studio</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">File <span>Studio</span></div>
+  <button id="settingsBtn" class="settings-btn">⚙</button>
+</header>
+
+<main class="container">
+
+  <nav class="tabs">
+    <button class="tab active" data-page="convert">ファイル変換</button>
+    <button class="tab" data-page="merge">PDF結合</button>
+    <button class="tab" data-page="split">PDF分割</button>
+    <button class="tab" data-page="zip">ZIP圧縮</button>
+  </nav>
+
+  <section id="convert" class="page">
+    <h1>ファイル形式変換</h1>
+    <p>ファイルを追加して変換先を選択してください。</p>
+
+    <label class="upload-area" for="fileInput">
+      <div class="upload-icon">＋</div>
+      <h3>ファイルを選択</h3>
+      <p>ここにファイルをドラッグ＆ドロップ</p>
+      <input type="file" id="fileInput" multiple>
+    </label>
+
+    <div id="fileList"></div>
+
+    <h3>★ お気に入り</h3>
+    <div id="favoriteFormats" class="format-grid"></div>
+
+    <button id="otherBtn" class="other-btn">
+      その他の形式を見る ▼
+    </button>
+
+    <div id="otherFormats" class="format-grid hidden"></div>
+
+    <button id="convertBtn" class="main-btn" disabled>
+      変換する
+    </button>
+
+    <div id="status"></div>
+  </section>
+
+  <section id="merge" class="page hidden">
+    <h1>PDF結合</h1>
+    <input type="file" id="mergeInput" accept=".pdf" multiple>
+    <button id="mergeBtn" class="main-btn">PDFを結合</button>
+  </section>
+
+  <section id="split" class="page hidden">
+    <h1>PDF分割</h1>
+    <input type="file" id="splitInput" accept=".pdf">
+    <select id="splitMode">
+      <option value="each">1ページずつ分割</option>
+      <option value="range">ページ範囲を指定</option>
+    </select>
+    <input id="pageRange" placeholder="例：1-3, 4-6">
+    <button id="splitBtn" class="main-btn">PDFを分割</button>
+  </section>
+
+  <section id="zip" class="page hidden">
+    <h1>ZIP圧縮</h1>
+    <input type="file" id="zipInput" multiple>
+    <input id="zipName" value="archive.zip">
+    <button id="zipBtn" class="main-btn">ZIPを作成</button>
+  </section>
+
+  <section id="settings" class="page hidden">
+    <h1>お気に入り設定</h1>
+    <div id="favoriteSettings"></div>
+  </section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
