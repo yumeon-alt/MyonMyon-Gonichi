@@ -1,22 +1,43 @@
 
 // js/app.js
 
+const $ = id => document.getElementById(id);
+
 const formats = [
-  "jpg", "jpeg", "png", "gif",
+  "jpg", "png", "gif",
   "webp", "bmp", "tiff", "svg",
   "ico", "raw", "avif", "heic", "pdf"
 ];
 
 const defaultFavorites = ["jpg", "png", "webp", "pdf"];
 
-let favorites = JSON.parse(
-  localStorage.getItem("fileStudioFavorites") || "null"
-) || [...defaultFavorites];
+// JPEGをJPGに統一
+let savedFavorites;
+
+try {
+  savedFavorites = JSON.parse(
+    localStorage.getItem("fileStudioFavorites") || "null"
+  );
+} catch {
+  savedFavorites = null;
+}
+
+let favorites = savedFavorites
+  ? [...new Set(
+      savedFavorites.map(format =>
+        format === "jpeg" ? "jpg" : format
+      )
+    )].filter(format => formats.includes(format))
+  : [...defaultFavorites];
 
 let selectedFormat = null;
 let selectedFiles = [];
 
-const $ = id => document.getElementById(id);
+// お気に入りを保存
+localStorage.setItem(
+  "fileStudioFavorites",
+  JSON.stringify(favorites)
+);
 
 // ページ切り替え
 document.querySelectorAll(".tab").forEach(tab => {
@@ -28,21 +49,37 @@ document.querySelectorAll(".tab").forEach(tab => {
 function showPage(page) {
   document.querySelectorAll(".page").forEach(element => {
     element.classList.remove("active");
+    element.classList.add("hidden");
   });
 
   const target = $(page);
-  if (target) target.classList.add("active");
+
+  if (target) {
+    target.classList.remove("hidden");
+    target.classList.add("active");
+  }
 
   document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.toggle("active", tab.dataset.page === page);
   });
 }
 
+// 設定画面
 if ($("settingsBtn")) {
-  $("settingsBtn").onclick = () => {
+  $("settingsBtn").addEventListener("click", () => {
     showPage("settings");
     renderSettings();
-  };
+  });
+}
+
+// ステータス表示
+function setStatus(message, isError = false) {
+  const status = $("status");
+
+  if (!status) return;
+
+  status.textContent = message;
+  status.style.color = isError ? "#d94848" : "#555";
 }
 
 // ファイル表示
@@ -61,9 +98,13 @@ function displayFiles(files) {
     $("convertBtn").disabled = selectedFiles.length === 0;
   }
 
-  renderFormats();
-  setStatus("");
+  setStatus();
 }
+
+// ファイル管理エリアから変換機能へファイル一覧を受け取る
+window.addEventListener("file-studio-files-changed", event => {
+  displayFiles(event.detail.files);
+});
 
 // ファイル選択
 if ($("fileInput")) {
@@ -72,20 +113,16 @@ if ($("fileInput")) {
   });
 }
 
-// ドラッグ＆ドロップ設定
+// ドラッグ＆ドロップ
 function setupDragAndDrop() {
   const input = $("fileInput");
 
   if (!input) return;
 
-  // input自体ではなく、アップロードエリアを取得
-  const uploadArea =
-    input.closest(".upload-area") ||
-    input.parentElement;
+  const uploadArea = input.closest(".upload-area");
 
   if (!uploadArea) return;
 
-  // ファイルをドロップしたとき
   uploadArea.addEventListener("dragover", event => {
     event.preventDefault();
     uploadArea.classList.add("drag-over");
@@ -107,10 +144,13 @@ function setupDragAndDrop() {
 
     displayFiles(files);
 
-    // inputにもファイルを反映
     try {
       const transfer = new DataTransfer();
-      files.forEach(file => transfer.items.add(file));
+
+      files.forEach(file => {
+        transfer.items.add(file);
+      });
+
       input.files = transfer.files;
     } catch (error) {
       console.warn("ファイル入力欄への反映を省略しました。", error);
@@ -195,17 +235,19 @@ if ($("otherBtn")) {
   $("otherBtn").addEventListener("click", () => {
     const area = $("otherFormats");
 
-    const isHidden = area.hidden;
+    const isHidden =
+      area.hidden || area.classList.contains("hidden");
 
     area.hidden = !isHidden;
+    area.classList.toggle("hidden", !isHidden);
 
     $("otherBtn").textContent = isHidden
-      ? "その他の形式を閉じる"
-      : "その他の形式を表示";
+      ? "その他の形式を閉じる ▲"
+      : "その他の形式を見る ▼";
   });
 }
 
-// 設定画面
+// お気に入り設定
 function renderSettings() {
   const area = $("favoriteSettings");
 
@@ -241,17 +283,7 @@ function renderSettings() {
   });
 }
 
-// ステータス
-function setStatus(message, isError = false) {
-  const status = $("status");
-
-  if (!status) return;
-
-  status.textContent = message;
-  status.style.color = isError ? "#d94848" : "#555";
-}
-
-// 変換
+// 変換処理
 if ($("convertBtn")) {
   $("convertBtn").addEventListener("click", async () => {
     if (selectedFiles.length === 0) {
@@ -279,7 +311,7 @@ if ($("convertBtn")) {
 
     for (const file of selectedFiles) {
       try {
-        const blob = await ImageConverter.convert(
+        const blob = await window.ImageConverter.convert(
           file,
           selectedFormat
         );
@@ -287,7 +319,8 @@ if ($("convertBtn")) {
         const originalName = file.name.replace(/\.[^.]+$/, "");
         const outputName = `${originalName}.${selectedFormat}`;
 
-        ImageConverter.download(blob, outputName);
+        window.ImageConverter.download(blob, outputName);
+
         success++;
 
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -317,4 +350,10 @@ setupDragAndDrop();
 
 if ($("convertBtn")) {
   $("convertBtn").disabled = true;
+}
+
+// その他の形式は初期状態で閉じる
+if ($("otherFormats")) {
+  $("otherFormats").hidden = true;
+  $("otherFormats").classList.add("hidden");
 }
