@@ -112,14 +112,42 @@
       <button id="splitBtn" class="main-btn">PDFを分割</button>
     </section>
 
-    <!-- ZIP圧縮 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <section id="zip" class="page hidden">
-      <h1>ZIP圧縮</h1>
-      <input type="file" id="zipInput" multiple>
-      <input id="zipName" value="archive.zip">
-      <button id="zipBtn" class="main-btn">ZIPを作成</button>
-    </section>
+<!-- ZIP圧縮セクション -->
+<section id="zip" class="page hidden">
+  <h1>ZIP圧縮</h1>
+  <p style="margin-bottom: 12px; color: #555;">ファイルを追加してZIPファイルにまとめてダウンロードできます。</p>
+
+  <div style="border: 1px solid #d0d7de; border-radius: 6px; background: #fff; overflow: hidden;">
+    <!-- ツールバー（ファイル形式変換タブと同じテイスト） -->
+    <div style="background: #f6f8fa; padding: 10px 12px; border-bottom: 1px solid #d0d7de; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="zipAddBtn" class="tool-btn" style="padding: 6px 12px; background: #fff; border: 1px solid #d0d7de; border-radius: 4px; cursor: pointer;">➕ 追加</button>
+        <button id="zipClearBtn" class="tool-btn" style="padding: 6px 12px; background: #fff; border: 1px solid #d0d7de; border-radius: 4px; cursor: pointer; color: #d73a49;">🗑️ クリア</button>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <input type="text" id="zipName" value="archive.zip" style="padding: 5px 10px; border: 1px solid #d0d7de; border-radius: 4px; font-size: 0.9rem;">
+        <button id="zipBtn" class="main-btn" style="padding: 6px 14px; background: #2ea44f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">ZIPを作成</button>
+      </div>
+    </div>
+
+    <!-- パス表示風のヘッダー -->
+    <div style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; color: #555; background: #fff;">
+      📁 ZIP圧縮対象ファイル
+    </div>
+
+    <!-- ファイルリスト・ドロップエリア -->
+    <div id="zipDropZone" class="file-list" style="min-height: 220px; padding: 12px; position: relative; background: #fff; cursor: pointer;">
+      <input type="file" id="zipInput" multiple style="display: none;">
+      <!--ここに動的にファイル行、または空のときのメッセージが表示されます-->
+    </div>
+  </div>
+
+  <!-- 圧縮完了・ダウンロードエリア（初期は非表示） -->
+  <div id="zipResultArea" class="hidden" style="display: none; align-items: center; gap: 10px; background: #f0f9f0; padding: 12px; border-radius: 6px; border: 1px solid #c3e6cb; margin-top: 15px;">
+    <span id="zipSuccessMsg" style="color: #28a745; font-weight: bold;">📦 圧縮できました！</span>
+    <button id="zipDownloadBtn" class="main-btn" style="padding: 6px 14px; background: #2ea44f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">ダウンロード</button>
+  </div>
+</section>
 
     <!-- 設定 -->
     <section id="settings" class="page hidden">
