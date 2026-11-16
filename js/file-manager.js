@@ -1,4 +1,3 @@
-
 // js/file-manager.js
 
 const fileInput = document.getElementById("fileInput");
@@ -7,6 +6,11 @@ const addFilesBtn = document.getElementById("addFilesBtn");
 const createFolderBtn = document.getElementById("createFolderBtn");
 const downloadFilesBtn = document.getElementById("downloadFilesBtn");
 const filePath = document.getElementById("filePath");
+
+// 追加したZIP圧縮画面用の要素
+const zipInput = document.getElementById("zipInput");
+const zipName = document.getElementById("zipName");
+const zipBtn = document.getElementById("zipBtn");
 
 let managedFiles = [];
 let folders = [];
@@ -49,37 +53,41 @@ function getFileIcon(file) {
 }
 
 // ファイル追加ボタン
-addFilesBtn.addEventListener("click", () => {
-  fileInput.click();
-});
+if (addFilesBtn && fileInput) {
+  addFilesBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
 
-// ファイル選択
-fileInput.addEventListener("change", () => {
-  addManagedFiles(Array.from(fileInput.files));
-  fileInput.value = "";
-});
+  // ファイル選択
+  fileInput.addEventListener("change", () => {
+    addManagedFiles(Array.from(fileInput.files));
+    fileInput.value = "";
+  });
+}
 
 // ドラッグ＆ドロップ
-["dragenter", "dragover"].forEach(eventName => {
-  fileList.addEventListener(eventName, event => {
-    event.preventDefault();
-    event.stopPropagation();
-    fileList.classList.add("drag-over");
+if (fileList) {
+  ["dragenter", "dragover"].forEach(eventName => {
+    fileList.addEventListener(eventName, event => {
+      event.preventDefault();
+      event.stopPropagation();
+      fileList.classList.add("drag-over");
+    });
   });
-});
 
-["dragleave", "drop"].forEach(eventName => {
-  fileList.addEventListener(eventName, event => {
-    event.preventDefault();
-    event.stopPropagation();
-    fileList.classList.remove("drag-over");
+  ["dragleave", "drop"].forEach(eventName => {
+    fileList.addEventListener(eventName, event => {
+      event.preventDefault();
+      event.stopPropagation();
+      fileList.classList.remove("drag-over");
+    });
   });
-});
 
-fileList.addEventListener("drop", event => {
-  const files = Array.from(event.dataTransfer.files);
-  addManagedFiles(files);
-});
+  fileList.addEventListener("drop", event => {
+    const files = Array.from(event.dataTransfer.files);
+    addManagedFiles(files);
+  });
+}
 
 // ファイル追加の共通処理
 function addManagedFiles(files) {
@@ -116,19 +124,21 @@ function notifyApp() {
 }
 
 // フォルダ作成
-createFolderBtn.addEventListener("click", () => {
-  const name = prompt("新しいフォルダ名を入力してください。");
+if (createFolderBtn) {
+  createFolderBtn.addEventListener("click", () => {
+    const name = prompt("新しいフォルダ名を入力してください。");
 
-  if (!name || !name.trim()) return;
+    if (!name || !name.trim()) return;
 
-  folders.push({
-    id: nextId++,
-    name: name.trim(),
-    parentId: currentFolder
+    folders.push({
+      id: nextId++,
+      name: name.trim(),
+      parentId: currentFolder
+    });
+
+    renderFileList();
   });
-
-  renderFileList();
-});
+}
 
 // フォルダを開く
 function openFolder(id) {
@@ -164,6 +174,7 @@ function getFolderPath() {
 
 // ファイル・フォルダ表示
 function renderFileList() {
+  if (!fileList) return;
   fileList.innerHTML = "";
   fileList.className = "file-list";
 
@@ -173,7 +184,9 @@ function renderFileList() {
     fileList.classList.add("tree-view");
   }
 
-  filePath.textContent = getFolderPath();
+  if (filePath) {
+    filePath.textContent = getFolderPath();
+  }
 
   let hasContent = false;
 
@@ -207,7 +220,9 @@ function renderFileList() {
 
   if (currentView === "details" && hasContent) {
     addDetailsHeader();
-    fileList.prepend(fileList.lastElementChild);
+    if (fileList.lastElementChild) {
+      fileList.prepend(fileList.lastElementChild);
+    }
   }
 }
 
@@ -419,43 +434,78 @@ function deleteFolder(id) {
   notifyApp();
 }
 
-// 選択したファイルをダウンロード
-downloadFilesBtn.addEventListener("click", async () => {
-  const selected = managedFiles.filter(item => item.selected);
-
-  if (selected.length === 0) {
-    alert("ダウンロードするファイルを選択してください。");
-    return;
-  }
-
-  if (selected.length === 1) {
-    downloadBlob(selected[0].file, selected[0].file.name);
-    return;
-  }
-
-  if (!window.JSZip) {
-    alert("ZIPライブラリを読み込めません。");
-    return;
-  }
-
-  const zip = new JSZip();
-
-  selected.forEach((item, index) => {
-    let filename = item.file.name;
-
-    if (zip.file(filename)) {
-      const dot = filename.lastIndexOf(".");
-      const base = dot > 0 ? filename.slice(0, dot) : filename;
-      const ext = dot > 0 ? filename.slice(dot) : "";
-      filename = `${base}_${index + 1}${ext}`;
+// 【機能追加】独立したZIP圧縮セクション（#zipInput, #zipName, #zipBtn）の処理
+if (zipBtn && zipInput) {
+  zipBtn.addEventListener("click", async () => {
+    const files = zipInput.files;
+    if (!files || files.length === 0) {
+      alert("ZIPにまとめるファイルを選択してください。");
+      return;
     }
 
-    zip.file(filename, item.file);
-  });
+    if (!window.JSZip) {
+      alert("ZIPライブラリ（JSZip）が読み込まれていません。");
+      return;
+    }
 
-  const blob = await zip.generateAsync({ type: "blob" });
-  downloadBlob(blob, "files.zip");
-});
+    const zip = new JSZip();
+
+    for (let i = 0; i < files.length; i++) {
+      zip.file(files[i].name, files[i]);
+    }
+
+    try {
+      const blob = await zip.generateAsync({ type: "blob" });
+      const filename = zipName && zipName.value.trim() !== "" ? zipName.value.trim() : "archive.zip";
+      
+      downloadBlob(blob, filename);
+      alert("ZIPファイルの作成が完了しました！");
+    } catch (error) {
+      console.error("ZIPの作成に失敗しました:", error);
+      alert("ZIPの作成中にエラーが発生しました。");
+    }
+  });
+}
+
+// 選択したファイルをダウンロード（ファイルマネージャー内）
+if (downloadFilesBtn) {
+  downloadFilesBtn.addEventListener("click", async () => {
+    const selected = managedFiles.filter(item => item.selected);
+
+    if (selected.length === 0) {
+      alert("ダウンロードするファイルを選択してください。");
+      return;
+    }
+
+    if (selected.length === 1) {
+      downloadBlob(selected[0].file, selected[0].file.name);
+      return;
+    }
+
+    if (!window.JSZip) {
+      alert("ZIPライブラリを読み込めません。");
+      return;
+    }
+
+    const zip = new JSZip();
+
+    selected.forEach((item, index) => {
+      let filename = item.file.name;
+
+      if (zip.file(filename)) {
+        const dot = filename.lastIndexOf(".");
+        const base = dot > 0 ? filename.slice(0, dot) : filename;
+        const ext = dot > 0 ? filename.slice(dot) : "";
+        filename = `${base}_${index + 1}${ext}`;
+      }
+
+      zip.file(filename, item.file);
+    });
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    downloadBlob(blob, "files.zip");
+  });
+}
 
 // ダウンロード実行
 function downloadBlob(blob, filename) {
