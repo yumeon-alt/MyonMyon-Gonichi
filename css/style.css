@@ -97,17 +97,17 @@ body {
 
 /* ===== ファイル管理エリア ===== */
 .file-manager {
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   margin: 20px 0;
   border: 1px solid #aeb6c2;
   border-radius: 9px;
   background: #fff;
   overflow: hidden;
-  box-sizing: border-box;
 }
 
-/* 1段目：上部ツールバー */
+/* ツールバー */
 .file-toolbar {
   display: flex;
   flex-direction: row;
@@ -149,7 +149,7 @@ body {
   border-color: #8298b8;
 }
 
-/* 2段目：フォルダの場所 */
+/* フォルダパス */
 .file-path {
   display: block;
   width: 100%;
@@ -159,10 +159,9 @@ body {
   border-bottom: 1px solid #eee;
   background: #fff;
   box-sizing: border-box;
-  clear: both;
 }
 
-/* 3段目：ファイル一覧・ドロップエリア */
+/* ファイル一覧 / ドロップ領域共通 */
 .file-list {
   display: block;
   width: 100%;
@@ -173,29 +172,39 @@ body {
   background: #fff;
   cursor: pointer;
   box-sizing: border-box;
-  clear: both;
 }
 
-/* ファイルがある場合のみGrid表示にする */
-.file-list.icon-view:has(.file-item) {
+/* ファイルが存在してアイコン表示モードの時のみ Grid を適用 */
+.file-list.has-files.icon-view {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   align-content: start;
   gap: 10px;
 }
 
-/* 空のドロップ領域メッセージ（ZIP圧縮同様の全幅・中央寄せ表示） */
+/* 空のドロップ枠（ZIP圧縮と完全同一） */
 .drop-empty {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 100% !important;
-  min-height: 180px !important;
-  padding: 30px 20px !important;
-  text-align: center !important;
-  color: #666 !important;
-  box-sizing: border-box !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 180px;
+  padding: 30px 20px;
+  text-align: center;
+  color: #666;
+  box-sizing: border-box;
+}
+
+.drop-empty .drop-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.drop-empty p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #666;
 }
 
 .drop-empty .drop-icon {
