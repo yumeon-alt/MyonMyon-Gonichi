@@ -50,17 +50,6 @@
 
   <main class="container">
 
-    <!-- ログインしている人にだけ表示される操作履歴セクション -->
-    <div id="history-section" class="hidden" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h3 style="margin: 0; font-size: 1.1rem;">📋 操作履歴（PC・スマホ同期）</h3>
-        <button id="clearHistoryBtn" style="padding: 4px 10px; background: #fff; border: 1px solid #d73a49; color: #d73a49; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">履歴をすべて削除</button>
-      </div>
-      <ul id="history-list" style="list-style: none; padding: 0; max-height: 180px; overflow-y: auto; font-size: 0.9rem; color: #444;">
-        <li style="color: #888;">履歴はまだありません。</li>
-      </ul>
-    </div>
-
     <nav class="tabs">
       <button class="tab active" data-page="convert">ファイル変換</button>
       <button class="tab" data-page="pdf-editor">PDF編集</button>
@@ -180,19 +169,30 @@
       <div id="favoriteSettings"></div>
     </section>
 
+    <!-- 5. 操作履歴セクション（ファイル変換・PDF編集・ZIP圧縮などのメイン機能の下に配置） -->
+    <div id="history-section" class="hidden" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 30px; margin-bottom: 25px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 1.1rem;">📋 操作履歴（ファイル名・ダウンロード・同期）</h3>
+        <button id="clearHistoryBtn" style="padding: 6px 12px; background: #fff; border: 1px solid #d73a49; color: #d73a49; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">すべての履歴を削除</button>
+      </div>
+      <ul id="history-list" style="list-style: none; padding: 0; max-height: 240px; overflow-y: auto; font-size: 0.9rem; color: #444; display: flex; flex-direction: column; gap: 8px;">
+        <li style="color: #888; padding: 8px;">履歴はまだありません。</li>
+      </ul>
+    </div>
+
   </main>
 
   <!-- Firebase SDK のインポートと初期化 -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.x.x/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.x.x/firebase-analytics.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-analytics.js";
     import { 
       getAuth, 
       createUserWithEmailAndPassword, 
       signInWithEmailAndPassword, 
       signOut, 
       onAuthStateChanged 
-    } from "https://www.gstatic.com/firebasejs/10.x.x/firebase-auth.js";
+    } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
     import { 
       getFirestore, 
       collection, 
@@ -204,7 +204,7 @@
       deleteDoc,
       doc,
       serverTimestamp 
-    } from "https://www.gstatic.com/firebasejs/10.x.x/firebase-firestore.js";
+    } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCMQ7QLKNgo1pJW-F-0cFUgQYkPIgHzQiQ",
