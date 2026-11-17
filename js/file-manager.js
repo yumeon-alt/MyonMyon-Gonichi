@@ -495,7 +495,6 @@ function renderZipFileList() {
   }
 
   if (zipSelectedFiles.length === 0) {
-    hideZipResult();
     const empty = document.createElement("div");
     empty.className = "drop-empty";
     empty.innerHTML = `
@@ -557,8 +556,16 @@ if (zipBtn) {
     });
 
     try {
+      // 1. ZIPファイルを生成
       generatedZipBlob = await zip.generateAsync({ type: "blob" });
+      
+      // 2. 完了（ダウンロードエリア）を表示
       showZipResult();
+
+      // 3. 圧縮が完了したため、リストから選択ファイルを消去
+      zipSelectedFiles = [];
+      renderZipFileList();
+
     } catch (error) {
       console.error("ZIPの作成に失敗しました:", error);
       alert("ZIPの作成中にエラーが発生しました。");

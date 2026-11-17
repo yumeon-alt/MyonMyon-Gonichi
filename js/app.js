@@ -1,4 +1,3 @@
-
 // js/app.js
 
 const $ = id => document.getElementById(id);
@@ -73,90 +72,45 @@ if ($("settingsBtn")) {
 }
 
 // ステータス表示
-function setStatus(message, isError = false) {
+function setStatus(message = "", isError = false) {
   const status = $("status");
-
   if (!status) return;
 
   status.textContent = message;
-  status.style.color = isError ? "#d94848" : "#555";
+  status.style.color = isError ? "#d94848" : "#16845b";
 }
 
-// ファイル表示
+// 変換ボタンの状態更新
+function updateConvertButtonState() {
+  const convertBtn = $("convertBtn");
+  if (convertBtn) {
+    convertBtn.disabled = !(selectedFiles.length > 0 && selectedFormat !== null);
+  }
+}
+
+// ファイル表示・選択状態の更新
 function displayFiles(files) {
   selectedFiles = Array.from(files);
 
   const nameArea = $("fileName");
-
   if (nameArea) {
     nameArea.textContent = selectedFiles.length
       ? selectedFiles.map(file => file.name).join("、")
       : "ファイルが選択されていません";
   }
 
-  if ($("convertBtn")) {
-    $("convertBtn").disabled = selectedFiles.length === 0;
+  updateConvertButtonState();
+  if (selectedFiles.length === 0) {
+    setStatus();
   }
-
-  setStatus();
 }
 
-// ファイル管理エリアから変換機能へファイル一覧を受け取る
+// ファイル管理エリア（file-manager.js）からの変更通知を受け取る
 window.addEventListener("file-studio-files-changed", event => {
-  displayFiles(event.detail.files);
+  if (event.detail && event.detail.files) {
+    displayFiles(event.detail.files);
+  }
 });
-
-// ファイル選択
-if ($("fileInput")) {
-  $("fileInput").addEventListener("change", event => {
-    displayFiles(event.target.files);
-  });
-}
-
-// ドラッグ＆ドロップ
-function setupDragAndDrop() {
-  const input = $("fileInput");
-
-  if (!input) return;
-
-  const uploadArea = input.closest(".upload-area");
-
-  if (!uploadArea) return;
-
-  uploadArea.addEventListener("dragover", event => {
-    event.preventDefault();
-    uploadArea.classList.add("drag-over");
-  });
-
-  uploadArea.addEventListener("dragleave", event => {
-    if (!uploadArea.contains(event.relatedTarget)) {
-      uploadArea.classList.remove("drag-over");
-    }
-  });
-
-  uploadArea.addEventListener("drop", event => {
-    event.preventDefault();
-    uploadArea.classList.remove("drag-over");
-
-    const files = Array.from(event.dataTransfer.files);
-
-    if (files.length === 0) return;
-
-    displayFiles(files);
-
-    try {
-      const transfer = new DataTransfer();
-
-      files.forEach(file => {
-        transfer.items.add(file);
-      });
-
-      input.files = transfer.files;
-    } catch (error) {
-      console.warn("ファイル入力欄への反映を省略しました。", error);
-    }
-  });
-}
 
 // お気に入り保存
 function saveFavorites() {
@@ -169,10 +123,9 @@ function saveFavorites() {
   renderSettings();
 }
 
-// 形式ボタン
+// 形式ボタン作成
 function createFormatButton(format) {
   const button = document.createElement("button");
-
   button.type = "button";
   button.className = "format-button";
 
@@ -189,13 +142,11 @@ function createFormatButton(format) {
 
   star.addEventListener("click", event => {
     event.stopPropagation();
-
     if (favorites.includes(format)) {
       favorites = favorites.filter(item => item !== format);
     } else {
       favorites.push(format);
     }
-
     saveFavorites();
   });
 
@@ -204,12 +155,13 @@ function createFormatButton(format) {
   button.addEventListener("click", () => {
     selectedFormat = format;
     renderFormats();
+    updateConvertButtonState();
   });
 
   return button;
 }
 
-// 形式一覧
+// 形式一覧を描画
 function renderFormats() {
   const favoriteArea = $("favoriteFormats");
   const otherArea = $("otherFormats");
@@ -234,9 +186,7 @@ function renderFormats() {
 if ($("otherBtn")) {
   $("otherBtn").addEventListener("click", () => {
     const area = $("otherFormats");
-
-    const isHidden =
-      area.hidden || area.classList.contains("hidden");
+    const isHidden = area.hidden || area.classList.contains("hidden");
 
     area.hidden = !isHidden;
     area.classList.toggle("hidden", !isHidden);
@@ -247,10 +197,9 @@ if ($("otherBtn")) {
   });
 }
 
-// お気に入り設定
+// お気に入り設定描画
 function renderSettings() {
   const area = $("favoriteSettings");
-
   if (!area) return;
 
   area.innerHTML = "";
@@ -271,7 +220,6 @@ function renderSettings() {
       } else {
         favorites = favorites.filter(item => item !== format);
       }
-
       saveFavorites();
     });
 
@@ -283,7 +231,7 @@ function renderSettings() {
   });
 }
 
-// 変換処理
+// 変換ボタン押下時の実行ロジック
 if ($("convertBtn")) {
   $("convertBtn").addEventListener("click", async () => {
     if (selectedFiles.length === 0) {
@@ -306,6 +254,7 @@ if ($("convertBtn")) {
 
     let success = 0;
     const errors = [];
+    const successfulFiles = [];
 
     setStatus("変換しています...");
 
@@ -322,11 +271,23 @@ if ($("convertBtn")) {
         window.ImageConverter.download(blob, outputName);
 
         success++;
-
+        successfulFiles.push(file); // 成功したファイルを記録
         await new Promise(resolve => setTimeout(resolve, 300));
 
       } catch (error) {
+        console.error("変換エラー:", error);
         errors.push(`${file.name}: ${error.message}`);
+      }
+    }
+
+    // 変換に成功したファイルをファイルマネージャーの一覧から削除する
+    if (successfulFiles.length > 0 && typeof managedFiles !== "undefined") {
+      managedFiles = managedFiles.filter(item => !successfulFiles.includes(item.file));
+      if (typeof renderFileList === "function") {
+        renderFileList();
+      }
+      if (typeof notifyApp === "function") {
+        notifyApp();
       }
     }
 
@@ -346,13 +307,8 @@ if ($("convertBtn")) {
 // 初期化
 renderFormats();
 renderSettings();
-setupDragAndDrop();
+updateConvertButtonState();
 
-if ($("convertBtn")) {
-  $("convertBtn").disabled = true;
-}
-
-// その他の形式は初期状態で閉じる
 if ($("otherFormats")) {
   $("otherFormats").hidden = true;
   $("otherFormats").classList.add("hidden");
