@@ -15,16 +15,35 @@
   const pdfStatus = document.getElementById("pdfStatus");
   const pdfViewTextBtn = document.getElementById("pdfViewTextBtn");
   const pdfViewThumbBtn = document.getElementById("pdfViewThumbBtn");
+  const pdfResultArea = document.getElementById("pdfResultArea");
+  const pdfDownloadBtn = document.getElementById("pdfDownloadBtn");
 
   let pdfPages = [];
   let currentViewMode = "thumb";
   let uniquePageId = 1;
   let draggedIndex = null;
+  let targetInsertIndex = null;
+  let generatedPdfBlob = null;
 
   function setPdfStatus(msg, isError = false) {
     if (!pdfStatus) return;
     pdfStatus.textContent = msg;
     pdfStatus.style.color = isError ? "#d94848" : "#16845b";
+  }
+
+  function hidePdfResult() {
+    generatedPdfBlob = null;
+    if (pdfResultArea) {
+      pdfResultArea.classList.add("hidden");
+      pdfResultArea.style.display = "none";
+    }
+  }
+
+  function showPdfResult() {
+    if (pdfResultArea) {
+      pdfResultArea.classList.remove("hidden");
+      pdfResultArea.style.display = "flex";
+    }
   }
 
   if (pdfViewTextBtn && pdfViewThumbBtn) {
@@ -56,6 +75,7 @@
     pdfInput.addEventListener("change", async (e) => {
       const files = Array.from(e.target.files);
       if (files.length > 0) {
+        hidePdfResult();
         await processIncomingFiles(files);
       }
       pdfInput.value = "";
@@ -65,12 +85,15 @@
       pdfDropZone.addEventListener(evt, e => {
         e.preventDefault();
         e.stopPropagation();
-        pdfDropZone.classList.add("drag-over");
+        if (draggedIndex === null) {
+          pdfDropZone.classList.add("drag-over");
+        }
       });
     });
 
     ["dragleave", "drop"].forEach(evt => {
       pdfDropZone.addEventListener(evt, e => {
+        if (draggedIndex !== null) return;
         e.preventDefault();
         e.stopPropagation();
         pdfDropZone.classList.remove("drag-over");
@@ -83,6 +106,7 @@
       e.stopPropagation();
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
+        hidePdfResult();
         await processIncomingFiles(files);
       }
     });
@@ -91,6 +115,7 @@
   if (pdfClearBtn) {
     pdfClearBtn.addEventListener("click", () => {
       pdfPages = [];
+      hidePdfResult();
       renderPdfPages();
       setPdfStatus("すべてのページをクリアしました。");
     });
@@ -188,7 +213,7 @@
       empty.className = "drop-empty";
       empty.innerHTML = `
         <div class="drop-icon">⇩</div>
-        <p>PDFや画像をここにドラッグ＆ドロップ、またはクリックして追加できます。</p>
+        <p>ファイルをここにドラッグ＆ドロップ、またはクリックして追加できます。</p>
       `;
       pdfDropZone.appendChild(empty);
       return;
@@ -196,13 +221,16 @@
 
     if (currentViewMode === "thumb") {
       const container = document.createElement("div");
+      container.id = "pdfGridContainer";
       container.style.display = "grid";
       container.style.gridTemplateColumns = "repeat(auto-fill, minmax(140px, 1fr))";
       container.style.gap = "15px";
+      container.style.alignItems = "center";
 
       pdfPages.forEach((page, index) => {
         const card = document.createElement("div");
         card.className = "pdf-page-item";
+        card.dataset.index = index;
         card.draggable = true;
         card.style.border = "1px solid #ccc";
         card.style.borderRadius = "8px";
@@ -213,11 +241,9 @@
         card.style.alignItems = "center";
         card.style.cursor = "grab";
         card.style.userSelect = "none";
-        card.style.position = "relative";
         card.style.boxSizing = "border-box";
-        card.style.transition = "border 0.1s ease";
 
-        setupDragEvents(card, index, "thumb");
+        setupDragEvents(card, index, "thumb", container);
 
         if (page.thumbUrl) {
           const img = document.createElement("img");
@@ -227,6 +253,7 @@
           img.style.maxHeight = "150px";
           img.style.border = "1px solid #eee";
           img.style.borderRadius = "4px";
+          img.style.pointerEvents = "none";
           img.draggable = false;
           card.appendChild(img);
         }
@@ -236,6 +263,7 @@
         nameSpan.style.marginTop = "6px";
         nameSpan.style.wordBreak = "break-all";
         nameSpan.style.textAlign = "center";
+        nameSpan.style.pointerEvents = "none";
         nameSpan.textContent = page.displayName;
 
         const ctrlArea = document.createElement("div");
@@ -281,26 +309,33 @@
       pdfDropZone.appendChild(container);
 
     } else {
+      const container = document.createElement("div");
+      container.id = "pdfGridContainer";
+      container.style.display = "flex";
+      container.style.flexDirection = "column";
+      container.style.gap = "8px";
+
       pdfPages.forEach((page, index) => {
         const row = document.createElement("div");
         row.className = "file-item pdf-page-item";
+        row.dataset.index = index;
         row.draggable = true;
         row.style.display = "flex";
         row.style.alignItems = "center";
         row.style.gap = "10px";
         row.style.cursor = "grab";
-        row.style.position = "relative";
         row.style.boxSizing = "border-box";
-        row.style.transition = "border 0.1s ease";
 
-        setupDragEvents(row, index, "text");
+        setupDragEvents(row, index, "text", container);
 
         const icon = document.createElement("span");
         icon.className = "file-icon";
+        icon.style.pointerEvents = "none";
         icon.textContent = "📕";
 
         const name = document.createElement("span");
         name.className = "file-name";
+        name.style.pointerEvents = "none";
         name.textContent = page.displayName;
 
         const ctrlArea = document.createElement("div");
@@ -335,120 +370,128 @@
 
         ctrlArea.append(upBtn, downBtn, delBtn);
         row.append(icon, name, ctrlArea);
-        pdfDropZone.appendChild(row);
+        container.appendChild(row);
       });
+
+      pdfDropZone.appendChild(container);
     }
   }
 
-  // ドラッグ＆ドロップ（挿入ガイド線表示）イベント設定
-  function setupDragEvents(element, index, mode) {
+  function setupDragEvents(element, index, mode, container) {
     element.addEventListener("dragstart", (e) => {
       draggedIndex = index;
-      element.style.opacity = "0.4";
+      targetInsertIndex = null;
+      element.style.opacity = "0.3";
       e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", index);
     });
 
-    element.addEventListener("dragend", () => {
-      draggedIndex = null;
+    element.addEventListener("dragend", (e) => {
+      e.preventDefault();
       element.style.opacity = "1";
-      clearDragOverStyles();
+      commitMove();
     });
 
     element.addEventListener("dragover", (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
 
-      if (draggedIndex !== null && draggedIndex !== index) {
-        clearDragOverStyles();
+      if (draggedIndex === null) return;
 
-        const rect = element.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
 
-        if (mode === "thumb") {
-          // 画像表示（左右判定）：マウス位置がカードの半分より左か右かで前後の線の位置を決める
-          const isLeftHalf = e.clientX - rect.left < rect.width / 2;
-          if (isLeftHalf) {
-            element.style.borderLeft = "4px solid #252535";
-          } else {
-            element.style.borderRight = "4px solid #252535";
-          }
-        } else {
-          // リスト表示（上下判定）：マウス位置が上下の半分より上か下かで決める
-          const isTopHalf = e.clientY - rect.top < rect.height / 2;
-          if (isTopHalf) {
-            element.style.borderTop = "4px solid #252535";
-          } else {
-            element.style.borderBottom = "4px solid #252535";
-          }
-        }
+      if (mode === "thumb") {
+        const isLeft = e.clientX - rect.left < rect.width / 2;
+        targetInsertIndex = isLeft ? index : index + 1;
+        showGuideLine(element, isLeft ? "before" : "after", mode, container);
+      } else {
+        const isTop = e.clientY - rect.top < rect.height / 2;
+        targetInsertIndex = isTop ? index : index + 1;
+        showGuideLine(element, isTop ? "before" : "after", mode, container);
       }
-    });
-
-    element.addEventListener("dragleave", () => {
-      element.style.border = "1px solid #ccc";
-      element.style.borderLeft = "";
-      element.style.borderRight = "";
-      element.style.borderTop = "";
-      element.style.borderBottom = "";
     });
 
     element.addEventListener("drop", (e) => {
       e.preventDefault();
       e.stopPropagation();
-
-      if (draggedIndex !== null && draggedIndex !== index) {
-        const rect = element.getBoundingClientRect();
-        let targetIndex = index;
-
-        if (mode === "thumb") {
-          const isLeftHalf = e.clientX - rect.left < rect.width / 2;
-          targetIndex = isLeftHalf ? index : index + 1;
-        } else {
-          const isTopHalf = e.clientY - rect.top < rect.height / 2;
-          targetIndex = isTopHalf ? index : index + 1;
-        }
-
-        if (draggedIndex < targetIndex) {
-          targetIndex--;
-        }
-
-        movePage(draggedIndex, targetIndex);
-        draggedIndex = null;
-      }
-      clearDragOverStyles();
+      commitMove();
     });
   }
 
-  function clearDragOverStyles() {
-    document.querySelectorAll(".pdf-page-item").forEach(item => {
-      item.style.border = "1px solid #ccc";
-      item.style.borderLeft = "";
-      item.style.borderRight = "";
-      item.style.borderTop = "";
-      item.style.borderBottom = "";
-      item.style.opacity = "1";
-    });
+  function commitMove() {
+    if (draggedIndex !== null && targetInsertIndex !== null) {
+      let fromIdx = draggedIndex;
+      let toIdx = targetInsertIndex;
+
+      if (fromIdx < toIdx) {
+        toIdx--;
+      }
+
+      if (fromIdx !== toIdx) {
+        movePage(fromIdx, toIdx);
+      }
+    }
+
+    draggedIndex = null;
+    targetInsertIndex = null;
+    removeGuideLine();
+  }
+
+  function showGuideLine(targetEl, position, mode, container) {
+    removeGuideLine();
+
+    const guide = document.createElement("div");
+    guide.className = "pdf-drag-guide";
+    guide.style.background = "#6559bb";
+    guide.style.borderRadius = "2px";
+    guide.style.pointerEvents = "none";
+    guide.style.boxShadow = "0 0 6px rgba(101, 89, 187, 0.6)";
+
+    if (mode === "thumb") {
+      guide.style.width = "4px";
+      guide.style.height = "160px";
+      guide.style.margin = "0 -8px";
+    } else {
+      guide.style.width = "100%";
+      guide.style.height = "4px";
+      guide.style.margin = "-4px 0";
+    }
+
+    if (position === "before") {
+      container.insertBefore(guide, targetEl);
+    } else {
+      container.insertBefore(guide, targetEl.nextSibling);
+    }
+  }
+
+  function removeGuideLine() {
+    document.querySelectorAll(".pdf-drag-guide").forEach(el => el.remove());
   }
 
   function movePage(fromIndex, toIndex) {
     if (toIndex < 0 || toIndex >= pdfPages.length) return;
     const target = pdfPages.splice(fromIndex, 1)[0];
     pdfPages.splice(toIndex, 0, target);
+    hidePdfResult();
     renderPdfPages();
   }
 
   function removePage(index) {
     pdfPages.splice(index, 1);
+    hidePdfResult();
     renderPdfPages();
   }
 
+  // 「PDFを作成」ボタン押下時
   if (pdfExportBtn) {
     pdfExportBtn.addEventListener("click", async () => {
       if (pdfPages.length === 0) {
-        alert("編集するPDFページがありません。");
+        alert("編集するPDFページがありません。ファイルを追加してください。");
+        hidePdfResult();
         return;
       }
 
-      setPdfStatus("PDFを統合・出力しています...");
+      setPdfStatus("PDFを作成しています...");
 
       try {
         const mergedPdf = await PDFLib.PDFDocument.create();
@@ -461,21 +504,44 @@
         }
 
         const pdfBytes = await mergedPdf.save();
-        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        generatedPdfBlob = new Blob([pdfBytes], { type: "application/pdf" });
 
-        const filename = pdfOutputName && pdfOutputName.value.trim() !== ""
-          ? pdfOutputName.value.trim()
-          : "merged.pdf";
-
-        const outputFilename = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
-
-        window.ImageConverter.download(blob, outputFilename);
-        setPdfStatus("PDFの出力が完了しました！");
+        showPdfResult();
+        setPdfStatus("");
       } catch (err) {
-        console.error("PDF結合エラー:", err);
-        setPdfStatus("PDFの結合出力中にエラーが発生しました。", true);
+        console.error("PDF作成エラー:", err);
+        setPdfStatus("PDFの作成中にエラーが発生しました。", true);
+        hidePdfResult();
       }
     });
   }
+
+  // 「ダウンロード」ボタン押下時（保存実行後に一覧クリア）
+  if (pdfDownloadBtn) {
+    pdfDownloadBtn.addEventListener("click", () => {
+      if (!generatedPdfBlob) {
+        alert("ダウンロードするPDFデータがありません。");
+        return;
+      }
+
+      const filename = pdfOutputName && pdfOutputName.value.trim() !== ""
+        ? pdfOutputName.value.trim()
+        : "merged.pdf";
+
+      const outputFilename = filename.endsWith(".pdf") ? filename : `${filename}.pdf`;
+
+      window.ImageConverter.download(generatedPdfBlob, outputFilename);
+
+      // 保存完了後にデータをクリアして初期状態に戻す
+      pdfPages = [];
+      hidePdfResult();
+      renderPdfPages();
+      setPdfStatus("PDFをダウンロードしました！");
+    });
+  }
+
+  // 初期描画
+  renderPdfPages();
+  hidePdfResult();
 
 })();
