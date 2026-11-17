@@ -541,7 +541,7 @@ if (zipBtn) {
   zipBtn.addEventListener("click", async () => {
     if (!zipSelectedFiles || zipSelectedFiles.length === 0) {
       alert("ZIPにまとめるファイルが選択されていません。ファイルを追加してください。");
-      hideZipResult();
+      hidePdfResult();
       return;
     }
 
@@ -556,13 +556,17 @@ if (zipBtn) {
     });
 
     try {
-      // 1. ZIPファイルを生成
       generatedZipBlob = await zip.generateAsync({ type: "blob" });
       
-      // 2. 完了（ダウンロードエリア）を表示
+      const zipFileName = zipName && zipName.value.trim() !== "" ? zipName.value.trim() : "archive.zip";
+
+      // 【追加】ZIP圧縮の履歴を保存
+      if (typeof window.saveUserHistory === "function") {
+        window.saveUserHistory("zip-compression", { fileName: zipFileName, fileCount: zipSelectedFiles.length });
+      }
+
       showZipResult();
 
-      // 3. 圧縮が完了したため、リストから選択ファイルを消去
       zipSelectedFiles = [];
       renderZipFileList();
 
