@@ -19,8 +19,7 @@
 
     <nav class="tabs">
       <button class="tab active" data-page="convert">ファイル変換</button>
-      <button class="tab" data-page="merge">PDF結合</button>
-      <button class="tab" data-page="split">PDF分割</button>
+      <button class="tab" data-page="pdf-editor">PDF編集</button>
       <button class="tab" data-page="zip">ZIP圧縮</button>
     </nav>
 
@@ -29,7 +28,6 @@
       <h1>ファイル形式変換</h1>
       <p>ファイルを追加して変換先を選択してください。</p>
 
-      <!-- ファイル管理エリア -->
       <div class="file-manager">
         <div class="file-toolbar">
           <div class="toolbar-left">
@@ -61,26 +59,41 @@
       <div id="status"></div>
     </section>
 
-    <!-- 2. PDF結合セクション -->
-    <section id="merge" class="page hidden">
-      <h1>PDF結合</h1>
-      <input type="file" id="mergeInput" accept=".pdf" multiple>
-      <button id="mergeBtn" class="main-btn">PDFを結合</button>
+    <!-- 2. PDF編集セクション（結合・分割・順序変更統合版） -->
+    <section id="pdf-editor" class="page hidden">
+      <h1>PDF編集（結合・分割・順序変更）</h1>
+      <p style="margin-bottom: 12px; color: #555;">PDFや画像をドラッグ＆ドロップしてページの並び替えや削除・結合ができます。</p>
+
+      <div style="border: 1px solid #d0d7de; border-radius: 6px; background: #fff; overflow: hidden;">
+        <div style="background: #f6f8fa; padding: 10px 12px; border-bottom: 1px solid #d0d7de; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="pdfAddBtn" class="tool-btn" style="padding: 6px 12px; background: #fff; border: 1px solid #d0d7de; border-radius: 4px; cursor: pointer;">➕ ファイル追加</button>
+            <button id="pdfClearBtn" class="tool-btn" style="padding: 6px 12px; background: #fff; border: 1px solid #d0d7de; border-radius: 4px; cursor: pointer; color: #d73a49;">🗑️ すべてクリア</button>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button id="pdfViewTextBtn" class="view-btn active" style="padding: 4px 8px; border: 1px solid #cbd0d8; border-radius: 4px; cursor: pointer; background: #fff;" title="リスト表示">☷ リスト表示</button>
+            <button id="pdfViewThumbBtn" class="view-btn" style="padding: 4px 8px; border: 1px solid #cbd0d8; border-radius: 4px; cursor: pointer; background: #fff;" title="画像表示">▦ 画像表示</button>
+          </div>
+        </div>
+
+        <div style="padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; color: #555; background: #fff;">
+          📕 PDF構成ページ一覧
+        </div>
+
+        <div id="pdfDropZone" class="file-list" style="min-height: 250px; padding: 12px; position: relative; background: #fff; cursor: pointer;">
+          <input type="file" id="pdfInput" multiple accept="image/*,.pdf,.heic,.heif,.tif,.tiff,.avif" style="display: none;">
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="text" id="pdfOutputName" value="merged.pdf" style="padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; flex: 1; min-width: 200px; font-size: 1rem;" placeholder="出力ファイル名">
+        <button id="pdfExportBtn" class="main-btn" style="margin-top: 0; width: auto; padding: 12px 24px; background: #6559bb;">PDFを出力・保存</button>
+      </div>
+
+      <div id="pdfStatus" style="margin-top: 15px; color: #555;"></div>
     </section>
 
-    <!-- 3. PDF分割セクション -->
-    <section id="split" class="page hidden">
-      <h1>PDF分割</h1>
-      <input type="file" id="splitInput" accept=".pdf">
-      <select id="splitMode">
-        <option value="each">1ページずつ分割</option>
-        <option value="range">ページ範囲を指定</option>
-      </select>
-      <input id="pageRange" placeholder="例：1-3, 4-6">
-      <button id="splitBtn" class="main-btn">PDFを分割</button>
-    </section>
-
-    <!-- 4. ZIP圧縮セクション -->
+    <!-- 3. ZIP圧縮セクション -->
     <section id="zip" class="page hidden">
       <h1>ZIP圧縮</h1>
       <p style="margin-bottom: 12px; color: #555;">ファイルを追加してZIPファイルにまとめてダウンロードできます。</p>
@@ -112,7 +125,7 @@
       </div>
     </section>
 
-    <!-- 5. お気に入り設定セクション -->
+    <!-- 4. お気に入り設定セクション -->
     <section id="settings" class="page hidden">
       <h1>お気に入り設定</h1>
       <div id="favoriteSettings"></div>
@@ -120,8 +133,9 @@
 
   </main>
 
-  <!-- ライブラリ -->
+  <!-- ライブラリ (PDF描画・レンダリング用に pdf.js を追加) -->
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
@@ -129,6 +143,7 @@
   <!-- アプリ本体 -->
   <script src="js/image-converter.js"></script>
   <script src="js/file-manager.js"></script>
+  <script src="js/pdf-editor.js"></script>
   <script src="js/app.js"></script>
 
 </body>
