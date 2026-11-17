@@ -37,7 +37,6 @@ function formatFileSize(size) {
 // 日付表示
 function formatDate(timestamp) {
   const date = new Date(timestamp);
-
   return (
     date.getFullYear() + "年" +
     (date.getMonth() + 1) + "月" +
@@ -50,14 +49,11 @@ function formatDate(timestamp) {
 // ファイルアイコン
 function getFileIcon(file) {
   const ext = file.name.split(".").pop().toLowerCase();
-
   if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "avif", "heic", "heif", "tif", "tiff"].includes(ext)) {
     return "🖼️";
   }
-
   if (ext === "pdf") return "📕";
   if (["zip", "rar", "7z"].includes(ext)) return "🗜️";
-
   return "📄";
 }
 
@@ -75,8 +71,6 @@ if (addFilesBtn && fileInput) {
 
 // ファイル変換エリアのクリック・ドラッグ＆ドロップ
 if (fileList && fileInput) {
-
-  // エリアをクリックするとPCのファイル選択画面を開く
   fileList.addEventListener("click", (e) => {
     if (
       e.target.closest(".file-item") ||
@@ -85,11 +79,9 @@ if (fileList && fileInput) {
     ) {
       return;
     }
-
     fileInput.click();
   });
 
-  // ドラッグ中の表示
   ["dragenter", "dragover"].forEach(eventName => {
     fileList.addEventListener(eventName, event => {
       event.preventDefault();
@@ -98,7 +90,6 @@ if (fileList && fileInput) {
     });
   });
 
-  // ドラッグ終了時の表示解除
   ["dragleave", "drop"].forEach(eventName => {
     fileList.addEventListener(eventName, event => {
       event.preventDefault();
@@ -107,7 +98,6 @@ if (fileList && fileInput) {
     });
   });
 
-  // ファイルをドロップしたら追加
   fileList.addEventListener("drop", event => {
     const files = Array.from(event.dataTransfer.files);
     addManagedFiles(files);
@@ -152,7 +142,6 @@ function notifyApp() {
 if (createFolderBtn) {
   createFolderBtn.addEventListener("click", () => {
     const name = prompt("新しいフォルダ名を入力してください。");
-
     if (!name || !name.trim()) return;
 
     folders.push({
@@ -174,10 +163,8 @@ function openFolder(id) {
 // ひとつ上のフォルダへ
 function goBackFolder() {
   if (currentFolder === null) return;
-
   const folder = folders.find(item => item.id === currentFolder);
   currentFolder = folder ? folder.parentId : null;
-
   renderFileList();
 }
 
@@ -185,15 +172,12 @@ function goBackFolder() {
 function getFolderPath() {
   const names = [];
   let id = currentFolder;
-
   while (id !== null) {
     const folder = folders.find(item => item.id === id);
     if (!folder) break;
-
     names.unshift(folder.name);
     id = folder.parentId;
   }
-
   return "📁 ファイル" + (names.length ? " / " + names.join(" / ") : "");
 }
 
@@ -202,12 +186,6 @@ function renderFileList() {
   if (!fileList) return;
   fileList.innerHTML = "";
   fileList.className = "file-list";
-
-  if (currentView === "icons") {
-    fileList.classList.add("icon-view");
-  } else if (currentView === "tree") {
-    fileList.classList.add("tree-view");
-  }
 
   if (filePath) {
     filePath.textContent = getFolderPath();
@@ -233,21 +211,28 @@ function renderFileList() {
     hasContent = renderCurrentFolder();
   }
 
-  if (!hasContent) {
+  if (hasContent) {
+    fileList.classList.add("has-files");
+    if (currentView === "icons") {
+      fileList.classList.add("icon-view");
+    } else if (currentView === "tree") {
+      fileList.classList.add("tree-view");
+    }
+
+    if (currentView === "details") {
+      addDetailsHeader();
+      if (fileList.lastElementChild) {
+        fileList.prepend(fileList.lastElementChild);
+      }
+    }
+  } else {
     const empty = document.createElement("div");
     empty.className = "drop-empty";
     empty.innerHTML = `
       <div class="drop-icon">⇩</div>
-      <p>ファイルをここにドラッグ＆ドロップして追加できます。</p>
+      <p>ファイルをここにドラッグ＆ドロップ、またはクリックして追加できます。</p>
     `;
     fileList.appendChild(empty);
-  }
-
-  if (currentView === "details" && hasContent) {
-    addDetailsHeader();
-    if (fileList.lastElementChild) {
-      fileList.prepend(fileList.lastElementChild);
-    }
   }
 }
 
@@ -279,21 +264,14 @@ function renderCurrentFolder() {
   currentFolders.forEach(folder => {
     const row = document.createElement("div");
     row.className = "file-item folder-item";
-
     row.innerHTML = `
       <span class="file-icon">📁</span>
       <span class="file-name">${escapeHTML(folder.name)}</span>
       <button class="delete-file" title="フォルダを削除">削除</button>
     `;
 
-    row.querySelector(".file-name").addEventListener("click", () => {
-      openFolder(folder.id);
-    });
-
-    row.querySelector(".file-icon").addEventListener("click", () => {
-      openFolder(folder.id);
-    });
-
+    row.querySelector(".file-name").addEventListener("click", () => openFolder(folder.id));
+    row.querySelector(".file-icon").addEventListener("click", () => openFolder(folder.id));
     row.querySelector(".delete-file").addEventListener("click", event => {
       event.stopPropagation();
       deleteFolder(folder.id);
@@ -311,28 +289,19 @@ function renderCurrentFolder() {
 
 // ツリー表示
 function renderTree(parentId, depth) {
-  const childFolders = folders.filter(folder =>
-    folder.parentId === parentId
-  );
+  const childFolders = folders.filter(folder => folder.parentId === parentId);
 
   childFolders.forEach(folder => {
     const row = document.createElement("div");
     row.className = "file-item folder-item";
     row.style.paddingLeft = (10 + depth * 22) + "px";
-
     row.innerHTML = `
       <span class="file-icon">📁</span>
       <span class="file-name">${escapeHTML(folder.name)}</span>
     `;
 
-    row.querySelector(".file-name").addEventListener("click", () => {
-      openFolder(folder.id);
-    });
-
-    row.querySelector(".file-icon").addEventListener("click", () => {
-      openFolder(folder.id);
-    });
-
+    row.querySelector(".file-name").addEventListener("click", () => openFolder(folder.id));
+    row.querySelector(".file-icon").addEventListener("click", () => openFolder(folder.id));
     fileList.appendChild(row);
 
     managedFiles
@@ -359,13 +328,11 @@ function renderTree(parentId, depth) {
 function createFileRow(item) {
   const row = document.createElement("div");
   row.className = "file-item";
-
   if (item.selected) row.classList.add("selected");
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
   checkbox.checked = item.selected;
-
   checkbox.addEventListener("change", () => {
     item.selected = checkbox.checked;
     renderFileList();
@@ -381,7 +348,6 @@ function createFileRow(item) {
 
   const info = document.createElement("span");
   info.className = "file-info";
-
   if (currentView === "details") {
     info.innerHTML = `
       <span>${formatDate(item.file.lastModified)}</span>
@@ -394,7 +360,6 @@ function createFileRow(item) {
   deleteButton.className = "delete-file";
   deleteButton.textContent = "削除";
   deleteButton.title = "ファイルを削除";
-
   deleteButton.addEventListener("click", event => {
     event.stopPropagation();
     deleteFile(item.id);
@@ -407,11 +372,9 @@ function createFileRow(item) {
   });
 
   row.append(checkbox, icon, name, info, deleteButton);
-
   return row;
 }
 
-// HTMLへの文字列挿入を安全にする
 function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g, char => ({
     "&": "&amp;",
@@ -422,45 +385,30 @@ function escapeHTML(value) {
   })[char]);
 }
 
-// ファイル削除
 function deleteFile(id) {
   managedFiles = managedFiles.filter(item => item.id !== id);
   renderFileList();
   notifyApp();
 }
 
-// フォルダ削除
 function deleteFolder(id) {
   if (!confirm("このフォルダと中のファイルを削除しますか？")) return;
-
   const removeFolderIds = [id];
-
   for (let i = 0; i < removeFolderIds.length; i++) {
     const parentId = removeFolderIds[i];
-
     folders
       .filter(folder => folder.parentId === parentId)
       .forEach(folder => removeFolderIds.push(folder.id));
   }
-
-  folders = folders.filter(folder =>
-    !removeFolderIds.includes(folder.id)
-  );
-
-  managedFiles = managedFiles.filter(item =>
-    !removeFolderIds.includes(item.folderId)
-  );
-
-  if (removeFolderIds.includes(currentFolder)) {
-    currentFolder = null;
-  }
-
+  folders = folders.filter(folder => !removeFolderIds.includes(folder.id));
+  managedFiles = managedFiles.filter(item => !removeFolderIds.includes(item.folderId));
+  if (removeFolderIds.includes(currentFolder)) currentFolder = null;
   renderFileList();
   notifyApp();
 }
 
 // ==========================================
-// 【改修】ZIP圧縮画面のロジック
+// ZIP圧縮画面のロジック
 // ==========================================
 
 function hideZipResult() {
@@ -479,7 +427,6 @@ function showZipResult() {
 }
 
 if (zipDropZone && zipInput) {
-  // ドロップゾーン全体のクリックでファイル選択（子要素の削除ボタンクリック時は除く）
   zipDropZone.addEventListener("click", (e) => {
     if (e.target.closest("button") || e.target.closest("input")) return;
     zipInput.click();
@@ -494,14 +441,13 @@ if (zipDropZone && zipInput) {
   zipInput.addEventListener("change", (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
-      zipSelectedFiles = files;
+      zipSelectedFiles = zipSelectedFiles.concat(files);
       hideZipResult();
     }
     zipInput.value = "";
     renderZipFileList();
   });
 
-  // ドラッグ＆ドロップ対応
   ["dragenter", "dragover"].forEach(eventName => {
     zipDropZone.addEventListener(eventName, event => {
       event.preventDefault();
@@ -522,17 +468,15 @@ if (zipDropZone && zipInput) {
     event.preventDefault();
     event.stopPropagation();
     zipDropZone.classList.remove("drag-over");
-
     const files = Array.from(event.dataTransfer.files);
     if (files.length > 0) {
-      zipSelectedFiles = files;
+      zipSelectedFiles = zipSelectedFiles.concat(files);
       hideZipResult();
       renderZipFileList();
     }
   });
 }
 
-// 「すべてクリア」ボタンの処理
 if (zipClearBtn) {
   zipClearBtn.addEventListener("click", () => {
     zipSelectedFiles = [];
@@ -541,11 +485,9 @@ if (zipClearBtn) {
   });
 }
 
-// ZIP対象ファイルのリストを描画する関数（ファイルマネージャーと同じ .file-item 構造）
 function renderZipFileList() {
   if (!zipDropZone) return;
 
-  // input要素は保持しつつ、中身のリスト項目や空表示を更新
   const existingInput = zipDropZone.querySelector("#zipInput");
   zipDropZone.innerHTML = "";
   if (existingInput) {
@@ -556,14 +498,8 @@ function renderZipFileList() {
     hideZipResult();
     const empty = document.createElement("div");
     empty.className = "drop-empty";
-    empty.style.display = "flex";
-    empty.style.flexDirection = "column";
-    empty.style.alignItems = "center";
-    empty.style.justifyContent = "center";
-    empty.style.padding = "40px 20px";
-    empty.style.color = "#666";
     empty.innerHTML = `
-      <div class="drop-icon" style="font-size: 2rem; margin-bottom: 8px;">⇩</div>
+      <div class="drop-icon">⇩</div>
       <p>ファイルをここにドラッグ＆ドロップ、またはクリックして追加できます。</p>
     `;
     zipDropZone.appendChild(empty);
@@ -572,7 +508,7 @@ function renderZipFileList() {
 
   zipSelectedFiles.forEach((file, index) => {
     const row = document.createElement("div");
-    row.className = "file-item"; // ファイルマネージャー共通の行スタイル
+    row.className = "file-item";
 
     const icon = document.createElement("span");
     icon.className = "file-icon";
@@ -590,7 +526,6 @@ function renderZipFileList() {
     deleteButton.className = "delete-file";
     deleteButton.textContent = "削除";
     deleteButton.title = "ファイルを削除";
-
     deleteButton.addEventListener("click", (event) => {
       event.stopPropagation();
       zipSelectedFiles.splice(index, 1);
@@ -603,7 +538,6 @@ function renderZipFileList() {
   });
 }
 
-// 「ZIPを作成」ボタン
 if (zipBtn) {
   zipBtn.addEventListener("click", async () => {
     if (!zipSelectedFiles || zipSelectedFiles.length === 0) {
@@ -633,7 +567,6 @@ if (zipBtn) {
   });
 }
 
-// 完了後に現れる「ダウンロード」ボタン
 if (zipDownloadBtn) {
   zipDownloadBtn.addEventListener("click", () => {
     if (!generatedZipBlob) {
@@ -645,75 +578,58 @@ if (zipDownloadBtn) {
   });
 }
 
-// 選択したファイルをダウンロード（ファイルマネージャー内）
 if (downloadFilesBtn) {
   downloadFilesBtn.addEventListener("click", async () => {
     const selected = managedFiles.filter(item => item.selected);
-
     if (selected.length === 0) {
       alert("ダウンロードするファイルを選択してください。");
       return;
     }
-
     if (selected.length === 1) {
       downloadBlob(selected[0].file, selected[0].file.name);
       return;
     }
-
     if (!window.JSZip) {
       alert("ZIPライブラリを読み込めません。");
       return;
     }
-
     const zip = new JSZip();
-
     selected.forEach((item, index) => {
       let filename = item.file.name;
-
       if (zip.file(filename)) {
         const dot = filename.lastIndexOf(".");
         const base = dot > 0 ? filename.slice(0, dot) : filename;
         const ext = dot > 0 ? filename.slice(dot) : "";
         filename = `${base}_${index + 1}${ext}`;
       }
-
       zip.file(filename, item.file);
     });
-
     const blob = await zip.generateAsync({ type: "blob" });
     downloadBlob(blob, "files.zip");
   });
 }
 
-// ダウンロード実行
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-
   link.href = url;
   link.download = filename;
-
   document.body.appendChild(link);
   link.click();
   link.remove();
-
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// 表示切り替え
 document.querySelectorAll(".view-btn").forEach(button => {
   button.addEventListener("click", () => {
     currentView = button.dataset.view;
-
     document.querySelectorAll(".view-btn").forEach(btn => {
       btn.classList.toggle("active", btn === button);
     });
-
     renderFileList();
   });
 });
 
-// 初期表示
 renderFileList();
 renderZipFileList();
 hideZipResult();
