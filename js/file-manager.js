@@ -236,9 +236,15 @@ function renderFileList() {
   if (!hasContent) {
     const empty = document.createElement("div");
     empty.className = "drop-empty";
+    empty.style.display = "flex";
+    empty.style.flexDirection = "column";
+    empty.style.alignItems = "center";
+    empty.style.justifyContent = "center";
+    empty.style.padding = "40px 20px";
+    empty.style.color = "#666";
     empty.innerHTML = `
-      <div class="drop-icon">⇩</div>
-      <p>ファイルをここにドラッグ＆ドロップして追加できます。</p>
+      <div class="drop-icon" style="font-size: 2rem; margin-bottom: 8px;">↓</div>
+      <p>ファイルをここにドラッグ＆ドロップ、またはクリックして追加できます。</p>
     `;
     fileList.appendChild(empty);
   }

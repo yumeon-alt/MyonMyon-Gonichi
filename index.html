@@ -32,9 +32,12 @@
       <p>ファイルを追加して変換先を選択してください。</p>
 
       <!-- ファイル管理エリア -->
-      <div class="file-manager">
+<div class="file-manager">
 
-        <div class="file-toolbar">
+  <div class="file-toolbar">
+
+    <!-- 変更箇所：ZIPタブに合わせてテキスト付きボタンに変更 -->
+    <div class="file-toolbar">
 
           <div class="toolbar-left">
             <button id="addFilesBtn" title="ファイルを追加">⊕</button>
@@ -50,25 +53,25 @@
 
         </div>
 
-        <div class="file-path" id="filePath">
-          📁 ファイル
-        </div>
+  <div class="file-path" id="filePath">
+    📁 ファイル
+  </div>
 
-        <div id="fileList" class="file-list icon-view">
-          <p class="empty-message">
-            ファイルがありません。左上のボタンから追加してください。
-          </p>
-        </div>
+  <div id="fileList" class="file-list icon-view">
+    <p class="empty-message">
+      ファイルがありません。左上のボタンから追加してください。
+    </p>
+  </div>
 
-        <input
-          type="file"
-          id="fileInput"
-          multiple
-          accept="image/*,.heic,.heif,.tif,.tiff,.avif,.pdf"
-          hidden
-        >
+  <input
+    type="file"
+    id="fileInput"
+    multiple
+    accept="image/*,.heic,.heif,.tif,.tiff,.avif,.pdf"
+    hidden
+  >
 
-      </div>
+</div>
 
       <!-- app.jsとの連携用。idは1つだけ -->
       <div id="fileName" hidden></div>
