@@ -73,8 +73,23 @@ if (addFilesBtn && fileInput) {
   });
 }
 
-// ドラッグ＆ドロップ（メインファイル一覧）
-if (fileList) {
+// ファイル変換エリアのクリック・ドラッグ＆ドロップ
+if (fileList && fileInput) {
+
+  // エリアをクリックするとPCのファイル選択画面を開く
+  fileList.addEventListener("click", (e) => {
+    if (
+      e.target.closest(".file-item") ||
+      e.target.closest("button") ||
+      e.target.closest("input")
+    ) {
+      return;
+    }
+
+    fileInput.click();
+  });
+
+  // ドラッグ中の表示
   ["dragenter", "dragover"].forEach(eventName => {
     fileList.addEventListener(eventName, event => {
       event.preventDefault();
@@ -83,6 +98,7 @@ if (fileList) {
     });
   });
 
+  // ドラッグ終了時の表示解除
   ["dragleave", "drop"].forEach(eventName => {
     fileList.addEventListener(eventName, event => {
       event.preventDefault();
@@ -91,6 +107,7 @@ if (fileList) {
     });
   });
 
+  // ファイルをドロップしたら追加
   fileList.addEventListener("drop", event => {
     const files = Array.from(event.dataTransfer.files);
     addManagedFiles(files);
