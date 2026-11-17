@@ -182,7 +182,7 @@ body {
   gap: 10px;
 }
 
-/* 空のドロップ枠（ZIP圧縮と完全同一） */
+/* 空のドロップ枠（全機能で完全統一） */
 .drop-empty {
   display: flex;
   flex-direction: column;
@@ -207,16 +207,6 @@ body {
   color: #666;
 }
 
-.drop-empty .drop-icon {
-  font-size: 2rem;
-  margin-bottom: 8px;
-}
-
-.drop-empty p {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #666;
-}
 /* アイコン表示 */
 .file-list.icon-view {
   display: grid;
@@ -388,6 +378,51 @@ body {
   color: #16845b;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* ===== ダウンロード完了エリア（枠幅いっぱいに拡張） ===== */
+.result-area {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 14px;
+  background: #f0f9f0;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #c3e6cb;
+  margin-top: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.result-area.hidden {
+  display: none !important;
+}
+
+.result-area-msg {
+  color: #28a745;
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+.result-area-btn {
+  display: block !important;
+  width: 100% !important;
+  padding: 16px 20px !important;
+  background: #2ea44f !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-weight: bold !important;
+  font-size: 1.05rem !important;
+  margin-top: 0 !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+}
+
+.result-area-btn:hover {
+  background: #2c974b !important;
 }
 
 /* ===== スマートフォン（レスポンシブ） ===== */
