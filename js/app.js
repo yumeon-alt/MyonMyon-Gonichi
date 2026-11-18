@@ -36,9 +36,7 @@ localStorage.setItem(
   JSON.stringify(favorites)
 );
 
-// ==========================================
-// モーダル開閉イベント（即時登録）
-// ==========================================
+// モーダル開閉イベント
 function initModalEvents() {
   const authModal = $("authModal");
   const authModalOpenBtn = $("authModalOpenBtn");
@@ -195,9 +193,6 @@ function initAuthSystem() {
   }
 }
 
-// ==========================================
-// ギガファイル便のリンク保存＆オープン処理
-// ==========================================
 function initGigafileHandlers() {
   const setupHandler = (type, getFileNameFn) => {
     const openBtn = $(`openGigafileBtn-${type}`);
@@ -237,7 +232,7 @@ function initGigafileHandlers() {
             createdAt: serverTimestamp()
           });
 
-          alert('ギガファイル便のリンクを履歴に保存しました！PCからログインして確認できます。');
+          alert('ギガファイル便のリンクを履歴に保存しました！');
           urlInput.value = '';
           loadUserHistories(auth.currentUser.uid);
         } catch (err) {
@@ -264,7 +259,6 @@ function initGigafileHandlers() {
   });
 }
 
-// Firestore への履歴保存用グローバル関数
 window.saveUserHistory = async function(actionType, details) {
   const auth = window.firebaseAuth;
   const db = window.firebaseDb;
@@ -333,8 +327,6 @@ function renderHistoryList(histories) {
     const typeLabel = item.actionType === "image-convert" ? "🖼️ 変換" : item.actionType === "pdf-editor" ? "📕 PDF編集" : "📦 ZIP圧縮";
     
     const textSpan = document.createElement("span");
-    
-    // 詳細データの中にギガファイル便のURLがあるかどうかで表示を切り替え
     let rightAreaHtml = "";
     if (item.details && item.details.gigafileUrl) {
       textSpan.textContent = `[${dateStr}] ${typeLabel}: ${item.details.fileName || "ファイル"} (ギガファイル便共有)`;
@@ -634,14 +626,13 @@ if ($("convertBtn")) {
       }
     }
 
-    if (successfulFiles.length > 0 && typeof managedFiles !== "undefined") {
-      managedFiles = managedFiles.filter(item => !successfulFiles.includes(item.file));
-      if (typeof renderFileList === "function") {
-        renderFileList();
-      }
-      if (typeof notifyApp === "function") {
-        notifyApp();
-      }
+    // ★ 変換成功時に画面上のファイル一覧を自動クリアするイベントを送信
+    if (successfulFiles.length > 0) {
+      window.dispatchEvent(
+        new CustomEvent("file-studio-clear-converted-files", {
+          detail: { convertedFiles: successfulFiles }
+        })
+      );
     }
 
     button.disabled = false;
@@ -649,7 +640,6 @@ if ($("convertBtn")) {
     if (errors.length === 0) {
       setStatus(`${success}個のファイルを変換しました！`);
       
-      // 変換成功時に外部ストレージ連携エリアを表示する
       const resultArea = $("convertResultArea");
       if (resultArea) {
         resultArea.style.display = "flex";

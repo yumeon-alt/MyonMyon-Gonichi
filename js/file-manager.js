@@ -474,7 +474,6 @@
 
         const zipFileName = zipName && zipName.value.trim() !== "" ? zipName.value.trim() : "archive.zip";
 
-        // ZIP圧縮履歴の保存
         if (typeof window.saveUserHistory === "function") {
           window.saveUserHistory("zip-compression", { fileName: zipFileName, fileCount: zipSelectedFiles.length });
         }
@@ -550,6 +549,16 @@
       });
       renderFileList();
     });
+  });
+
+  // ★ ファイル変換成功時に選択されていたファイルを自動クリアするイベントリスナー
+  window.addEventListener("file-studio-clear-converted-files", event => {
+    if (event.detail && event.detail.convertedFiles) {
+      const convertedFiles = event.detail.convertedFiles;
+      managedFiles = managedFiles.filter(item => !convertedFiles.includes(item.file));
+      renderFileList();
+      notifyApp();
+    }
   });
 
   renderFileList();
