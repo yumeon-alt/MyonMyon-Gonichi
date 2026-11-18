@@ -12,7 +12,6 @@
 
   const zipViewThumbBtn = document.getElementById("zipViewThumbBtn");
   const zipViewTextBtn = document.getElementById("zipViewTextBtn");
-  const zipViewTreeBtn = document.getElementById("zipViewTreeBtn");
 
   const zipResultArea = document.getElementById("zipResultArea");
   const zipDownloadBtn = document.getElementById("zipDownloadBtn");
@@ -20,9 +19,11 @@
   let zipFiles = [];
   let zipFolders = [];
   let currentFolder = null;
-  let currentViewMode = "thumb"; // "thumb", "text", "tree"
+  let currentViewMode = "thumb"; // "thumb", "text"
   let uniqueId = 1;
   let draggedItem = null; // { type: 'file' | 'folder', id: number }
+  let selectedItem = null; // { type: 'file' | 'folder', id: number }
+  let expandedFolderIds = new Set(); // リスト表示で展開中のフォルダID
   let generatedZipBlob = null;
 
   function formatFileSize(size) {
@@ -63,36 +64,74 @@
   }
 
   // ビューモード切り替え
-  const viewBtns = [zipViewThumbBtn, zipViewTextBtn, zipViewTreeBtn];
   function setViewMode(mode, activeBtn) {
     currentViewMode = mode;
-    viewBtns.forEach(btn => btn && btn.classList.remove("active"));
-    if (activeBtn) activeBtn.classList.add("active");
+    if (zipViewThumbBtn) zipViewThumbBtn.classList.toggle("active", mode === "thumb");
+    if (zipViewTextBtn) zipViewTextBtn.classList.toggle("active", mode === "text");
     renderZipFiles();
   }
 
   if (zipViewThumbBtn) zipViewThumbBtn.addEventListener("click", () => setViewMode("thumb", zipViewThumbBtn));
   if (zipViewTextBtn) zipViewTextBtn.addEventListener("click", () => setViewMode("text", zipViewTextBtn));
-  if (zipViewTreeBtn) zipViewTreeBtn.addEventListener("click", () => setViewMode("tree", zipViewTreeBtn));
+
+  // Mac風キーボード操作
+  window.addEventListener("keydown", (e) => {
+    const zipSection = document.getElementById("zip");
+    if (!zipSection || zipSection.classList.contains("hidden")) return;
+    if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+
+    const isMacCmd = e.metaKey || e.ctrlKey;
+
+    if ((isMacCmd && e.key === "ArrowUp") || e.key === "Escape") {
+      if (currentFolder !== null) {
+        e.preventDefault();
+        const f = zipFolders.find(fold => fold.id === currentFolder);
+        currentFolder = f ? f.parentId : null;
+        selectedItem = null;
+        renderZipFiles();
+      }
+    } else if ((isMacCmd && e.key === "ArrowDown") || e.key === "Enter") {
+      if (selectedItem && selectedItem.type === "folder") {
+        e.preventDefault();
+        openFolder(selectedItem.id);
+      }
+    } else if (e.key === "Delete" || e.key === "Backspace" || (isMacCmd && e.key === "Backspace")) {
+      if (selectedItem) {
+        e.preventDefault();
+        if (selectedItem.type === "file") {
+          removeFileById(selectedItem.id);
+        } else if (selectedItem.type === "folder") {
+          deleteFolder(selectedItem.id);
+        }
+        selectedItem = null;
+      }
+    }
+  });
 
   // フォルダ作成
   if (zipCreateFolderBtn) {
     zipCreateFolderBtn.addEventListener("click", () => {
       const name = prompt("新しいフォルダ名を入力してください。");
       if (!name || !name.trim()) return;
+      const newFolderId = uniqueId++;
       zipFolders.push({
-        id: uniqueId++,
+        id: newFolderId,
         name: name.trim(),
         parentId: currentFolder
       });
+      expandedFolderIds.add(newFolderId);
       renderZipFiles();
     });
   }
 
   if (zipDropZone && zipInput) {
     zipDropZone.addEventListener("click", (e) => {
-      if (e.target.closest(".file-item") || e.target.closest(".pdf-page-item-card") || e.target.closest("button") || e.target.closest("input")) return;
-      zipInput.click();
+      const isItemClick = e.target.closest(".file-item") || e.target.closest(".pdf-page-item-card") || e.target.closest("button") || e.target.closest("input");
+      if (!isItemClick) {
+        selectedItem = null;
+        renderZipFiles();
+        zipInput.click();
+      }
     });
 
     if (zipAddBtn) {
@@ -127,11 +166,22 @@
       });
     });
 
+    // 枠外（ドロップゾーンの空白エリア）にドロップされた場合、直近の親フォルダへ移動（外出し）
     zipDropZone.addEventListener("drop", (e) => {
-      if (draggedItem) return;
       e.preventDefault();
       e.stopPropagation();
       zipDropZone.classList.remove("drag-over");
+
+      if (draggedItem) {
+        let parentFolderId = null;
+        if (currentFolder !== null) {
+          const cf = zipFolders.find(f => f.id === currentFolder);
+          parentFolderId = cf ? cf.parentId : null;
+        }
+        moveItemToFolder(draggedItem, parentFolderId);
+        return;
+      }
+
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
         hideZipResult();
@@ -145,6 +195,8 @@
       zipFiles = [];
       zipFolders = [];
       currentFolder = null;
+      selectedItem = null;
+      expandedFolderIds.clear();
       hideZipResult();
       renderZipFiles();
     });
@@ -162,7 +214,6 @@
     renderZipFiles();
   }
 
-  // フォルダパス（パンくず）の描画＆ドロップ領域設定
   function updateFolderPath() {
     if (!zipPath) return;
     zipPath.innerHTML = "";
@@ -181,37 +232,41 @@
     fullChain.forEach((crumb, index) => {
       if (index > 0) {
         const sep = document.createElement("span");
-        sep.textContent = " / ";
-        sep.style.color = "#999";
-        sep.style.margin = "0 4px";
+        sep.textContent = " › ";
+        sep.style.color = "#888";
+        sep.style.margin = "0 3px";
         zipPath.appendChild(sep);
       }
 
       const link = document.createElement("span");
       link.textContent = crumb.name;
       link.style.cursor = "pointer";
-      link.style.padding = "2px 4px";
+      link.style.padding = "2px 6px";
       link.style.borderRadius = "4px";
 
-      link.addEventListener("click", () => {
+      link.addEventListener("click", (e) => {
+        e.stopPropagation();
         currentFolder = crumb.id;
+        selectedItem = null;
         renderZipFiles();
       });
 
-      // フォルダパスリンクへのドラッグ＆ドロップ移動対応
       link.addEventListener("dragover", (e) => {
         e.preventDefault();
         if (draggedItem) {
-          link.style.background = "#dce5f3";
+          link.style.background = "#007aff";
+          link.style.color = "#fff";
         }
       });
       link.addEventListener("dragleave", () => {
         link.style.background = "transparent";
+        link.style.color = "";
       });
       link.addEventListener("drop", (e) => {
         e.preventDefault();
         e.stopPropagation();
         link.style.background = "transparent";
+        link.style.color = "";
         if (draggedItem) {
           moveItemToFolder(draggedItem, crumb.id);
         }
@@ -223,6 +278,7 @@
 
   function openFolder(id) {
     currentFolder = id;
+    selectedItem = null;
     renderZipFiles();
   }
 
@@ -231,11 +287,10 @@
       const file = zipFiles.find(f => f.id === itemInfo.id);
       if (file) file.folderId = targetFolderId;
     } else if (itemInfo.type === "folder") {
-      if (itemInfo.id === targetFolderId) return; // 自分自身には移動不可
-      // 移動先が自分の子孫フォルダかチェック
+      if (itemInfo.id === targetFolderId) return;
       let checkId = targetFolderId;
       while (checkId !== null) {
-        if (checkId === itemInfo.id) return; // ループ防止
+        if (checkId === itemInfo.id) return;
         const f = zipFolders.find(fold => fold.id === checkId);
         checkId = f ? f.parentId : null;
       }
@@ -259,13 +314,6 @@
     zipDropZone.className = "file-list";
     if (currentViewMode === "thumb") zipDropZone.classList.add("icon-view");
     if (currentViewMode === "text") zipDropZone.classList.add("details-view");
-    if (currentViewMode === "tree") zipDropZone.classList.add("tree-view");
-
-    if (currentViewMode === "tree") {
-      zipDropZone.classList.add("has-files");
-      renderTree(null, 0);
-      return;
-    }
 
     const currentFolders = zipFolders.filter(f => f.parentId === currentFolder);
     const currentFiles = zipFiles.filter(f => f.folderId === currentFolder);
@@ -290,12 +338,17 @@
     zipDropZone.classList.add("has-files");
 
     if (currentViewMode === "thumb") {
-      // フォルダ表示（アイコン表示）
+      // フォルダ（アイコン表示）
       currentFolders.forEach(folder => {
         const card = document.createElement("div");
         card.className = "pdf-page-item-card";
-        card.draggable = true;
+        if (selectedItem && selectedItem.type === "folder" && selectedItem.id === folder.id) {
+          card.style.background = "#e4efff";
+          card.style.borderColor = "#007aff";
+          card.style.boxShadow = "0 0 0 2px rgba(0,122,255,0.2)";
+        }
 
+        card.draggable = true;
         setupItemDragEvents(card, { type: "folder", id: folder.id });
         setupFolderDropEvents(card, folder.id);
 
@@ -317,17 +370,32 @@
           deleteFolder(folder.id);
         });
 
-        card.addEventListener("dblclick", () => openFolder(folder.id));
+        card.addEventListener("click", (e) => {
+          e.stopPropagation();
+          selectedItem = { type: "folder", id: folder.id };
+          renderZipFiles();
+        });
+
+        card.addEventListener("dblclick", (e) => {
+          e.stopPropagation();
+          openFolder(folder.id);
+        });
+
         card.append(icon, nameSpan, delBtn);
         zipDropZone.appendChild(card);
       });
 
-      // ファイル表示（アイコン表示）
+      // ファイル（アイコン表示）
       currentFiles.forEach(item => {
         const card = document.createElement("div");
         card.className = "pdf-page-item-card";
-        card.draggable = true;
+        if (selectedItem && selectedItem.type === "file" && selectedItem.id === item.id) {
+          card.style.background = "#e4efff";
+          card.style.borderColor = "#007aff";
+          card.style.boxShadow = "0 0 0 2px rgba(0,122,255,0.2)";
+        }
 
+        card.draggable = true;
         setupItemDragEvents(card, { type: "file", id: item.id });
 
         const icon = document.createElement("span");
@@ -352,147 +420,146 @@
           removeFileById(item.id);
         });
 
+        card.addEventListener("click", (e) => {
+          e.stopPropagation();
+          selectedItem = { type: "file", id: item.id };
+          renderZipFiles();
+        });
+
         ctrlArea.appendChild(delBtn);
         card.append(icon, nameSpan, ctrlArea);
         zipDropZone.appendChild(card);
       });
 
     } else {
-      // フォルダ表示（リスト表示）
-      currentFolders.forEach(folder => {
-        const row = document.createElement("div");
-        row.className = "file-item folder-item";
-        row.draggable = true;
-
-        setupItemDragEvents(row, { type: "folder", id: folder.id });
-        setupFolderDropEvents(row, folder.id);
-
-        row.innerHTML = `
-          <span class="file-icon" style="pointer-events:none;">📁</span>
-          <span class="file-name" style="pointer-events:none;">${escapeHTML(folder.name)}</span>
-          <button class="delete-file" title="フォルダを削除">削除</button>
-        `;
-
-        row.addEventListener("dblclick", () => openFolder(folder.id));
-        row.querySelector(".delete-file").addEventListener("click", e => {
-          e.stopPropagation();
-          deleteFolder(folder.id);
-        });
-        zipDropZone.appendChild(row);
-      });
-
-      // ファイル表示（リスト表示）
-      currentFiles.forEach(item => {
-        const row = document.createElement("div");
-        row.className = "file-item";
-        row.draggable = true;
-
-        setupItemDragEvents(row, { type: "file", id: item.id });
-
-        const icon = document.createElement("span");
-        icon.className = "file-icon";
-        icon.textContent = getFileIcon(item.file);
-        icon.style.pointerEvents = "none";
-
-        const name = document.createElement("span");
-        name.className = "file-name";
-        name.textContent = item.displayName;
-        name.style.pointerEvents = "none";
-
-        const info = document.createElement("span");
-        info.className = "file-info";
-        info.innerHTML = `<span>${formatFileSize(item.file.size)}</span>`;
-
-        const ctrlArea = document.createElement("div");
-        ctrlArea.style.display = "flex";
-        ctrlArea.style.gap = "4px";
-
-        const delBtn = document.createElement("button");
-        delBtn.className = "delete-file";
-        delBtn.textContent = "削除";
-        delBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          removeFileById(item.id);
-        });
-
-        ctrlArea.appendChild(delBtn);
-        row.append(icon, name, info, ctrlArea);
-        zipDropZone.appendChild(row);
-      });
+      // 🍎 リスト表示（Mac風 階層展開対応）
+      renderListViewNodes(currentFolder, 0);
     }
   }
 
-  function renderTree(parentId, depth) {
+  // リスト表示時の階層展開描画ロジック
+  function renderListViewNodes(parentId, depth) {
     const childFolders = zipFolders.filter(folder => folder.parentId === parentId);
+    const childFiles = zipFiles.filter(item => item.folderId === parentId);
+
     childFolders.forEach(folder => {
+      const isExpanded = expandedFolderIds.has(folder.id);
+
       const row = document.createElement("div");
       row.className = "file-item folder-item";
-      row.style.paddingLeft = (10 + depth * 22) + "px";
-      row.draggable = true;
+      row.style.paddingLeft = (10 + depth * 20) + "px";
+      if (selectedItem && selectedItem.type === "folder" && selectedItem.id === folder.id) {
+        row.style.background = "#e4efff";
+      }
 
+      row.draggable = true;
       setupItemDragEvents(row, { type: "folder", id: folder.id });
       setupFolderDropEvents(row, folder.id);
 
-      row.innerHTML = `
-        <span class="file-icon" style="pointer-events:none;">📁</span>
-        <span class="file-name" style="pointer-events:none;">${escapeHTML(folder.name)}</span>
-        <button class="delete-file" title="フォルダを削除">削除</button>
-      `;
-      row.addEventListener("dblclick", () => openFolder(folder.id));
-      row.querySelector(".delete-file").addEventListener("click", e => { e.stopPropagation(); deleteFolder(folder.id); });
+      // Mac風 ▶ トグル矢印
+      const toggleBtn = document.createElement("span");
+      toggleBtn.style.display = "inline-block";
+      toggleBtn.style.width = "18px";
+      toggleBtn.style.textAlign = "center";
+      toggleBtn.style.cursor = "pointer";
+      toggleBtn.style.userSelect = "none";
+      toggleBtn.style.fontSize = "12px";
+      toggleBtn.style.color = "#666";
+      toggleBtn.textContent = isExpanded ? "▼" : "▶";
+
+      toggleBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (isExpanded) {
+          expandedFolderIds.delete(folder.id);
+        } else {
+          expandedFolderIds.add(folder.id);
+        }
+        renderZipFiles();
+      });
+
+      const icon = document.createElement("span");
+      icon.className = "file-icon";
+      icon.style.pointerEvents = "none";
+      icon.textContent = "📁";
+
+      const name = document.createElement("span");
+      name.className = "file-name";
+      name.style.pointerEvents = "none";
+      name.textContent = folder.name;
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "delete-file";
+      delBtn.textContent = "削除";
+      delBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        deleteFolder(folder.id);
+      });
+
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectedItem = { type: "folder", id: folder.id };
+        renderZipFiles();
+      });
+
+      row.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+        openFolder(folder.id);
+      });
+
+      row.append(toggleBtn, icon, name, delBtn);
       zipDropZone.appendChild(row);
 
-      zipFiles.filter(item => item.folderId === folder.id).forEach(item => {
-        const fileRow = createFileTreeRow(item, depth + 1);
-        zipDropZone.appendChild(fileRow);
-      });
-
-      renderTree(folder.id, depth + 1);
+      // フォルダが展開されている場合、子要素を再帰描画
+      if (isExpanded) {
+        renderListViewNodes(folder.id, depth + 1);
+      }
     });
 
-    if (parentId === null) {
-      zipFiles.filter(item => item.folderId === null).forEach(item => {
-        const fileRow = createFileTreeRow(item, 0);
-        zipDropZone.appendChild(fileRow);
+    childFiles.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "file-item";
+      row.style.paddingLeft = (28 + depth * 20) + "px"; // 矢印分のオフセット調整
+      if (selectedItem && selectedItem.type === "file" && selectedItem.id === item.id) {
+        row.style.background = "#e4efff";
+      }
+
+      row.draggable = true;
+      setupItemDragEvents(row, { type: "file", id: item.id });
+
+      const icon = document.createElement("span");
+      icon.className = "file-icon";
+      icon.textContent = getFileIcon(item.file);
+      icon.style.pointerEvents = "none";
+
+      const name = document.createElement("span");
+      name.className = "file-name";
+      name.textContent = item.displayName;
+      name.style.pointerEvents = "none";
+
+      const info = document.createElement("span");
+      info.className = "file-info";
+      info.innerHTML = `<span>${formatFileSize(item.file.size)}</span>`;
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "delete-file";
+      delBtn.textContent = "削除";
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        removeFileById(item.id);
       });
-    }
-  }
 
-  function createFileTreeRow(item, depth) {
-    const row = document.createElement("div");
-    row.className = "file-item";
-    row.style.paddingLeft = (10 + depth * 22) + "px";
-    row.draggable = true;
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        selectedItem = { type: "file", id: item.id };
+        renderZipFiles();
+      });
 
-    setupItemDragEvents(row, { type: "file", id: item.id });
-
-    const icon = document.createElement("span");
-    icon.className = "file-icon";
-    icon.textContent = getFileIcon(item.file);
-    icon.style.pointerEvents = "none";
-
-    const name = document.createElement("span");
-    name.className = "file-name";
-    name.textContent = item.displayName;
-    name.style.pointerEvents = "none";
-
-    const info = document.createElement("span");
-    info.className = "file-info";
-    info.innerHTML = `<span>${formatFileSize(item.file.size)}</span>`;
-
-    const delBtn = document.createElement("button");
-    delBtn.className = "delete-file";
-    delBtn.textContent = "削除";
-    delBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      removeFileById(item.id);
+      row.append(icon, name, info, delBtn);
+      zipDropZone.appendChild(row);
     });
-
-    row.append(icon, name, info, delBtn);
-    return row;
   }
 
-  // ドラッグ開始・終了の登録
+  // ドラッグ開始・終了
   function setupItemDragEvents(element, itemInfo) {
     element.addEventListener("dragstart", (e) => {
       draggedItem = itemInfo;
@@ -507,36 +574,30 @@
     });
   }
 
-  // フォルダに対してドロップされた時の登録
+  // フォルダ上へのドロップ
   function setupFolderDropEvents(element, targetFolderId) {
     element.addEventListener("dragover", (e) => {
       e.preventDefault();
       if (draggedItem && (draggedItem.type !== "folder" || draggedItem.id !== targetFolderId)) {
-        element.style.border = "2px dashed #6559bb";
-        element.style.background = "#f6f4ff";
+        element.style.outline = "2px dashed #007aff";
+        element.style.background = "#e4efff";
       }
     });
 
     element.addEventListener("dragleave", () => {
-      element.style.border = "";
+      element.style.outline = "";
       element.style.background = "";
     });
 
     element.addEventListener("drop", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      element.style.border = "";
+      element.style.outline = "";
       element.style.background = "";
       if (draggedItem) {
         moveItemToFolder(draggedItem, targetFolderId);
       }
     });
-  }
-
-  function escapeHTML(str) {
-    return String(str).replace(/[&<>"']/g, char => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-    })[char]);
   }
 
   function deleteFolder(id) {
@@ -546,20 +607,26 @@
       const pid = removeIds[i];
       zipFolders.filter(f => f.parentId === pid).forEach(f => removeIds.push(f.id));
     }
+    removeIds.forEach(fid => expandedFolderIds.delete(fid));
     zipFolders = zipFolders.filter(f => !removeIds.includes(f.id));
     zipFiles = zipFiles.filter(item => !removeIds.includes(item.folderId));
     if (removeIds.includes(currentFolder)) currentFolder = null;
+    if (selectedItem && selectedItem.type === "folder" && removeIds.includes(selectedItem.id)) {
+      selectedItem = null;
+    }
     hideZipResult();
     renderZipFiles();
   }
 
   function removeFileById(id) {
     zipFiles = zipFiles.filter(f => f.id !== id);
+    if (selectedItem && selectedItem.type === "file" && selectedItem.id === id) {
+      selectedItem = null;
+    }
     hideZipResult();
     renderZipFiles();
   }
 
-  // フルパスを生成する関数（ZIP出力時のフォルダ構造維持用）
   function getFullFilePath(item) {
     const pathParts = [item.file.name];
     let id = item.folderId;
@@ -625,6 +692,8 @@
       zipFiles = [];
       zipFolders = [];
       currentFolder = null;
+      selectedItem = null;
+      expandedFolderIds.clear();
       hideZipResult();
       renderZipFiles();
     });
