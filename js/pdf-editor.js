@@ -46,6 +46,13 @@
     }
   }
 
+  // ★ ボタンの非活性/活性状態を更新する関数
+  function updatePdfExportBtnState() {
+    if (pdfExportBtn) {
+      pdfExportBtn.disabled = pdfPages.length === 0;
+    }
+  }
+
   if (pdfViewTextBtn && pdfViewThumbBtn) {
     pdfViewTextBtn.addEventListener("click", () => {
       currentViewMode = "text";
@@ -204,6 +211,8 @@
   }
 
   function renderPdfPages() {
+    updatePdfExportBtnState(); // ★ 表示更新に合わせてボタン状態を更新
+
     if (!pdfDropZone) return;
 
     const existingInput = pdfDropZone.querySelector("#pdfInput");
@@ -484,7 +493,7 @@
         showPdfResult();
         setPdfStatus("");
       } catch (err) {
-        console.error("PDF作成エラー:", error);
+        console.error("PDF作成エラー:", err);
         setPdfStatus("PDFの作成中にエラーが発生しました。", true);
         hidePdfResult();
       }
