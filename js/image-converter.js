@@ -1,214 +1,220 @@
-
 // js/image-converter.js
 
-window.ImageConverter = {
+window.ImageConverter = (function () {
+  // pdfjsLibのワーカー初期化
+  if (window.pdfjsLib && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+  }
 
-  // 拡張子を取得
-  getExtension(file) {
-    return file.name.split(".").pop().toLowerCase();
-  },
+  // ファイルを DataURL に変換
+  function readFileAsDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 
-  // HEIC / HEIF をPNGに変換
-  async decodeHEIC(file) {
-    if (typeof heic2any !== "function") {
-      throw new Error("HEIC変換ライブラリを読み込めません。");
+  // ファイルを ArrayBuffer に変換
+  function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  // Canvas から Blob を生成
+  function canvasToBlob(canvas, mimeType, quality = 0.92) {
+    return new Promise(resolve => {
+      canvas.toBlob(blob => resolve(blob), mimeType, quality);
+    });
+  }
+
+  // HTMLImageElement の読み込み
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  // HEIC / HEIF の変換
+  async function convertHeicToCanvas(file) {
+    if (!window.heic2any) {
+      throw new Error("HEIC変換ライブラリがロードされていません。");
     }
-
-    const result = await heic2any({
+    const conversionResult = await heic2any({
       blob: file,
       toType: "image/png"
     });
+    const blob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
+    const url = URL.createObjectURL(blob);
+    const img = await loadImage(url);
+    URL.revokeObjectURL(url);
 
-    return Array.isArray(result) ? result[0] : result;
-  },
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0);
+    return canvas;
+  }
 
-  // TIFFをCanvasに読み込む
-  decodeTIFF(file) {
-    if (typeof UTIF === "undefined") {
-      throw new Error("TIFF変換ライブラリを読み込めません。");
+  // TIFF の変換
+  async function convertTiffToCanvas(file) {
+    if (!window.UTIF) {
+      throw new Error("TIFF変換ライブラリがロードされていません。");
+    }
+    const buffer = await readFileAsArrayBuffer(file);
+    const ifds = UTIF.decode(buffer);
+    if (!ifds || ifds.length === 0) {
+      throw new Error("TIFFファイルのデコードに失敗しました。");
+    }
+    UTIF.decodeImage(buffer, ifds[0]);
+    const rgba = UTIF.toRGBA8(ifds[0]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = ifds[0].width;
+    canvas.height = ifds[0].height;
+    const ctx = canvas.getContext("2d");
+    const imgData = ctx.createImageData(canvas.width, canvas.height);
+    imgData.data.set(rgba);
+    ctx.putImageData(imgData, 0, 0);
+    return canvas;
+  }
+
+  // 一般的な画像ファイルを Canvas に変換
+  async function fileToCanvas(file) {
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (ext === "heic" || ext === "heif") {
+      return await convertHeicToCanvas(file);
+    }
+    if (ext === "tif" || ext === "tiff") {
+      return await convertTiffToCanvas(file);
     }
 
-    const buffer = file.arrayBuffer();
+    const dataUrl = await readFileAsDataURL(file);
+    const img = await loadImage(dataUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext("2d");
 
-    return buffer.then(data => {
-      const ifds = UTIF.decode(data);
+    // 透過背景を持つ画像がJPGなどに変換される際、背景を白にする処理
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    return canvas;
+  }
 
-      if (!ifds || !ifds.length) {
-        throw new Error("TIFF画像を読み込めません。");
-      }
-
-      UTIF.decodeImage(data, ifds[0]);
-
-      const page = ifds[0];
-      const rgba = UTIF.toRGBA8(page);
-
-      const canvas = document.createElement("canvas");
-      canvas.width = page.width;
-      canvas.height = page.height;
-
-      const context = canvas.getContext("2d");
-      const imageData = new ImageData(
-        new Uint8ClampedArray(rgba),
-        page.width,
-        page.height
-      );
-
-      context.putImageData(imageData, 0, 0);
-
-      return canvas;
-    });
-  },
-
-  // ファイルをCanvasに読み込む
-  async loadCanvas(file) {
-    const extension = this.getExtension(file);
-
-    // HEIC / HEIF
-    if (["heic", "heif"].includes(extension)) {
-      const pngBlob = await this.decodeHEIC(file);
-      return this.blobToCanvas(pngBlob);
+  // PDF の 1 ページ目を Canvas に変換 (PDF -> 画像用)
+  async function pdfToCanvas(file) {
+    if (!window.pdfjsLib) {
+      throw new Error("PDF表示ライブラリ(pdf.js)が読み込まれていません。");
     }
+    const buffer = await readFileAsArrayBuffer(file);
+    const loadingTask = pdfjsLib.getDocument({ data: buffer });
+    const pdf = await loadingTask.promise;
+    const page = await pdf.getPage(1);
 
-    // TIFF
-    if (["tif", "tiff"].includes(extension)) {
-      return await this.decodeTIFF(file);
-    }
+    const viewport = page.getViewport({ scale: 2.0 }); // 高画質化のためスケール2.0
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
 
-    // 通常の画像形式
-    return await this.imageToCanvas(file);
-  },
+    await page.render({
+      canvasContext: ctx,
+      viewport: viewport
+    }).promise;
 
-  // BlobからCanvasを作る
-  async blobToCanvas(blob) {
-    return await this.imageToCanvas(blob);
-  },
+    return canvas;
+  }
 
-  // 通常画像をCanvasに読み込む
-  imageToCanvas(file) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const image = new Image();
+  // ===== メイン変換関数 =====
+  async function convert(file, targetFormat) {
+    const target = targetFormat.toLowerCase();
+    const ext = file.name.split(".").pop().toLowerCase();
 
-      image.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight;
-
-        const context = canvas.getContext("2d");
-        context.drawImage(image, 0, 0);
-
-        URL.revokeObjectURL(url);
-        resolve(canvas);
-      };
-
-      image.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error(
-          `${file.name || "画像"}を読み込めません。形式が未対応か、ファイルが破損している可能性があります。`
-        ));
-      };
-
-      image.src = url;
-    });
-  },
-
-  // CanvasからBlobを作る
-  canvasToBlob(canvas, mime) {
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(blob => {
-        if (!blob) {
-          reject(new Error("画像の変換に失敗しました。"));
-          return;
-        }
-
-        if (blob.type !== mime) {
-          reject(new Error(
-            "このブラウザは指定された出力形式に対応していません。"
-          ));
-          return;
-        }
-
-        resolve(blob);
-      }, mime, 0.92);
-    });
-  },
-
-  // 画像を指定形式に変換
-  async convert(file, format) {
-    const canvas = await this.loadCanvas(file);
-
-    // JPEGは白背景にする
-    if (format === "jpg") {
-      const output = document.createElement("canvas");
-      output.width = canvas.width;
-      output.height = canvas.height;
-
-      const context = output.getContext("2d");
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, output.width, output.height);
-      context.drawImage(canvas, 0, 0);
-
-      return await this.canvasToBlob(output, "image/jpeg");
-    }
-
-    // PNG
-    if (format === "png") {
-      return await this.canvasToBlob(canvas, "image/png");
-    }
-
-    // WebP
-    if (format === "webp") {
-      return await this.canvasToBlob(canvas, "image/webp");
-    }
-
-    // PDF
-    if (format === "pdf") {
+    // 1. PDF への変換 (画像 / HEIC / TIFF / PDF -> PDF)
+    if (target === "pdf") {
       if (!window.PDFLib) {
-        throw new Error("PDFライブラリを読み込めません。");
+        throw new Error("PDF生成ライブラリ(pdf-lib)が読み込まれていません。");
       }
 
-      const pngBlob = await this.canvasToBlob(canvas, "image/png");
-      const pngBytes = await pngBlob.arrayBuffer();
+      if (ext === "pdf") {
+        // PDF から PDF への変換（そのまま複製）
+        return file;
+      }
 
-      const pdf = await PDFLib.PDFDocument.create();
-      const embedded = await pdf.embedPng(pngBytes);
+      const canvas = await fileToCanvas(file);
+      const pngDataUrl = canvas.toDataURL("image/png");
+      const pngBytes = await fetch(pngDataUrl).then(res => res.arrayBuffer());
 
-      const page = pdf.addPage([
-        canvas.width,
-        canvas.height
-      ]);
-
-      page.drawImage(embedded, {
+      const pdfDoc = await PDFLib.PDFDocument.create();
+      const image = await pdfDoc.embedPng(pngBytes);
+      const page = pdfDoc.addPage([image.width, image.height]);
+      page.drawImage(image, {
         x: 0,
         y: 0,
-        width: canvas.width,
-        height: canvas.height
+        width: image.width,
+        height: image.height
       });
 
-      const pdfBytes = await pdf.save();
-
-      return new Blob([pdfBytes], {
-        type: "application/pdf"
-      });
+      const pdfBytes = await pdfDoc.save();
+      return new Blob([pdfBytes], { type: "application/pdf" });
     }
 
-    throw new Error(
-      `${format.toUpperCase()}形式への出力はまだ対応していません。`
-    );
-  },
+    // 2. 入力ファイルが PDF で、ターゲットが画像形式（JPG, PNG, WEBP, BMP など）の場合
+    let canvas;
+    if (ext === "pdf") {
+      canvas = await pdfToCanvas(file);
+    } else {
+      canvas = await fileToCanvas(file);
+    }
 
-  // ダウンロード
-  download(blob, filename) {
+    // 3. 各ターゲット形式への Blob 出力
+    let mimeType = "image/png";
+    if (target === "jpg" || target === "jpeg") mimeType = "image/jpeg";
+    else if (target === "webp") mimeType = "image/webp";
+    else if (target === "gif") mimeType = "image/gif";
+    else if (target === "bmp") mimeType = "image/bmp";
+    else if (target === "svg") mimeType = "image/svg+xml";
+    else if (target === "ico") mimeType = "image/x-icon";
+    else if (target === "avif") mimeType = "image/avif";
+    else if (target === "tiff" || target === "tif") mimeType = "image/tiff";
+
+    const blob = await canvasToBlob(canvas, mimeType);
+
+    // ブラウザが特定MIME（AVIF / TIFF / ICO等）の直接変換に対応していない場合のフォールバック
+    if (!blob) {
+      const fallbackBlob = await canvasToBlob(canvas, "image/png");
+      return new Blob([fallbackBlob], { type: mimeType });
+    }
+
+    return blob;
+  }
+
+  // ダウンロードヘルパー
+  function download(blob, filename) {
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = filename;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-};
+
+  return {
+    convert,
+    download
+  };
+})();
