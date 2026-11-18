@@ -64,7 +64,7 @@
 
   if (pdfDropZone && pdfInput) {
     pdfDropZone.addEventListener("click", (e) => {
-      if (e.target.closest("button") || e.target.closest("input") || e.target.closest(".pdf-page-item")) return;
+      if (e.target.closest(".file-item") || e.target.closest(".pdf-page-item-card") || e.target.closest("button") || e.target.closest("input")) return;
       pdfInput.click();
     });
 
@@ -104,6 +104,7 @@
       if (draggedIndex !== null) return;
       e.preventDefault();
       e.stopPropagation();
+      pdfDropZone.classList.remove("drag-over");
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
         hidePdfResult();
@@ -150,18 +151,19 @@
             });
           }
         } else {
+          const imgUrl = URL.createObjectURL(file);
+          
           if (!window.ImageConverter) {
             throw new Error("画像変換ライブラリが利用できません。");
           }
           const pdfBlob = await window.ImageConverter.convert(file, "pdf");
           const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
-          const thumbUrl = await generateThumbnailUrl(pdfBytes);
 
           pdfPages.push({
             id: uniquePageId++,
             displayName: `${baseName}-1.pdf`,
             pdfBytes: pdfBytes,
-            thumbUrl: thumbUrl
+            thumbUrl: imgUrl
           });
         }
       } catch (err) {
@@ -208,85 +210,63 @@
     pdfDropZone.innerHTML = "";
     if (existingInput) pdfDropZone.appendChild(existingInput);
 
+    pdfDropZone.className = "file-list";
+    if (currentViewMode === "thumb") {
+      pdfDropZone.classList.add("icon-view");
+    } else {
+      pdfDropZone.classList.add("details-view");
+    }
+
     if (pdfPages.length === 0) {
+      pdfDropZone.classList.remove("has-files");
       const empty = document.createElement("div");
       empty.className = "drop-empty";
       empty.innerHTML = `
-      <div class="drop-icon">
-        <svg viewBox="0 0 24 24">
-          <!-- 太い円枠 -->
-          <circle cx="12" cy="12" r="9.5" fill="none" stroke="#8f959e" stroke-width="2.3" />
-          <!-- 角の丸い太め矢印 -->
-          <path d="M12 7.5v8.5 M8.5 12.5L12 16l3.5-3.5" 
-                fill="none" 
-                stroke="#8f959e" 
-                stroke-width="2.5" 
-                stroke-linecap="round" 
-                stroke-linejoin="round" />
-        </svg>
-      </div>
-      <p>あなたはファイルをここにドラッグ＆ドロップして追加できます。</p>
-    `;
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9.5" fill="none" stroke="#8f959e" stroke-width="2.3" />
+            <path d="M12 7.5v8.5 M8.5 12.5L12 16l3.5-3.5" fill="none" stroke="#8f959e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <p>あなたはファイルをここにドラッグ＆ドロップして追加できます。</p>
+      `;
       pdfDropZone.appendChild(empty);
       return;
     }
 
-    if (currentViewMode === "thumb") {
-      const container = document.createElement("div");
-      container.id = "pdfGridContainer";
-      container.style.display = "grid";
-      container.style.gridTemplateColumns = "repeat(auto-fill, minmax(140px, 1fr))";
-      container.style.gap = "15px";
-      container.style.alignItems = "center";
+    pdfDropZone.classList.add("has-files");
 
+    if (currentViewMode === "thumb") {
       pdfPages.forEach((page, index) => {
         const card = document.createElement("div");
-        card.className = "pdf-page-item";
+        card.className = "pdf-page-item-card";
         card.dataset.index = index;
         card.draggable = true;
-        card.style.border = "1px solid #ccc";
-        card.style.borderRadius = "8px";
-        card.style.padding = "8px";
-        card.style.background = "#fafafa";
-        card.style.display = "flex";
-        card.style.flexDirection = "column";
-        card.style.alignItems = "center";
-        card.style.cursor = "grab";
-        card.style.userSelect = "none";
-        card.style.boxSizing = "border-box";
 
-        setupDragEvents(card, index, "thumb", container);
+        setupDragEvents(card, index, "thumb", pdfDropZone);
 
         if (page.thumbUrl) {
           const img = document.createElement("img");
           img.src = page.thumbUrl;
-          img.style.maxWidth = "100%";
-          img.style.height = "auto";
-          img.style.maxHeight = "150px";
-          img.style.border = "1px solid #eee";
-          img.style.borderRadius = "4px";
-          img.style.pointerEvents = "none";
-          img.draggable = false;
           card.appendChild(img);
+        } else {
+          const icon = document.createElement("span");
+          icon.style.fontSize = "32px";
+          icon.textContent = "📕";
+          card.appendChild(icon);
         }
 
         const nameSpan = document.createElement("span");
-        nameSpan.style.fontSize = "0.75rem";
-        nameSpan.style.marginTop = "6px";
-        nameSpan.style.wordBreak = "break-all";
-        nameSpan.style.textAlign = "center";
+        nameSpan.className = "file-name";
         nameSpan.style.pointerEvents = "none";
         nameSpan.textContent = page.displayName;
 
         const ctrlArea = document.createElement("div");
-        ctrlArea.style.display = "flex";
-        ctrlArea.style.gap = "4px";
-        ctrlArea.style.marginTop = "6px";
+        ctrlArea.className = "ctrl-area";
 
         const upBtn = document.createElement("button");
         upBtn.textContent = "◀";
         upBtn.title = "前へ";
-        upBtn.style.padding = "2px 6px";
         upBtn.disabled = index === 0;
         upBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -296,7 +276,6 @@
         const downBtn = document.createElement("button");
         downBtn.textContent = "▶";
         downBtn.title = "次へ";
-        downBtn.style.padding = "2px 6px";
         downBtn.disabled = index === pdfPages.length - 1;
         downBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -305,9 +284,8 @@
 
         const delBtn = document.createElement("button");
         delBtn.textContent = "✕";
+        delBtn.className = "del-btn";
         delBtn.title = "削除";
-        delBtn.style.padding = "2px 6px";
-        delBtn.style.color = "#c44";
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           removePage(index);
@@ -315,30 +293,18 @@
 
         ctrlArea.append(upBtn, downBtn, delBtn);
         card.append(nameSpan, ctrlArea);
-        container.appendChild(card);
+        pdfDropZone.appendChild(card);
       });
 
-      pdfDropZone.appendChild(container);
-
     } else {
-      const container = document.createElement("div");
-      container.id = "pdfGridContainer";
-      container.style.display = "flex";
-      container.style.flexDirection = "column";
-      container.style.gap = "8px";
-
       pdfPages.forEach((page, index) => {
         const row = document.createElement("div");
-        row.className = "file-item pdf-page-item";
+        row.className = "file-item";
         row.dataset.index = index;
         row.draggable = true;
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.gap = "10px";
         row.style.cursor = "grab";
-        row.style.boxSizing = "border-box";
 
-        setupDragEvents(row, index, "text", container);
+        setupDragEvents(row, index, "text", pdfDropZone);
 
         const icon = document.createElement("span");
         icon.className = "file-icon";
@@ -382,10 +348,8 @@
 
         ctrlArea.append(upBtn, downBtn, delBtn);
         row.append(icon, name, ctrlArea);
-        container.appendChild(row);
+        pdfDropZone.appendChild(row);
       });
-
-      pdfDropZone.appendChild(container);
     }
   }
 
@@ -462,7 +426,7 @@
     if (mode === "thumb") {
       guide.style.width = "4px";
       guide.style.height = "160px";
-      guide.style.margin = "0 -8px";
+      guide.style.margin = "0 -6px";
     } else {
       guide.style.width = "100%";
       guide.style.height = "4px";
@@ -494,7 +458,6 @@
     renderPdfPages();
   }
 
-  // 「PDFを作成」ボタン押下時
   if (pdfExportBtn) {
     pdfExportBtn.addEventListener("click", async () => {
       if (pdfPages.length === 0) {
@@ -521,19 +484,16 @@
         showPdfResult();
         setPdfStatus("");
       } catch (err) {
-        console.error("PDF作成エラー:", err);
+        console.error("PDF作成エラー:", error);
         setPdfStatus("PDFの作成中にエラーが発生しました。", true);
         hidePdfResult();
       }
     });
   }
 
-if (pdfDownloadBtn) {
+  if (pdfDownloadBtn) {
     pdfDownloadBtn.addEventListener("click", () => {
-      if (!generatedPdfBlob) {
-        alert("ダウンロードするPDFデータがありません。");
-        return;
-      }
+      if (!generatedPdfBlob) return;
 
       const filename = pdfOutputName && pdfOutputName.value.trim() !== ""
         ? pdfOutputName.value.trim()
@@ -543,11 +503,6 @@ if (pdfDownloadBtn) {
 
       window.ImageConverter.download(generatedPdfBlob, outputFilename);
 
-      // 【追加】PDF編集の履歴を保存
-      if (typeof window.saveUserHistory === "function") {
-        window.saveUserHistory("pdf-editor", { fileName: outputFilename, pageCount: pdfPages.length });
-      }
-
       pdfPages = [];
       hidePdfResult();
       renderPdfPages();
@@ -555,8 +510,6 @@ if (pdfDownloadBtn) {
     });
   }
 
-  // 初期描画
   renderPdfPages();
   hidePdfResult();
-
 })();
