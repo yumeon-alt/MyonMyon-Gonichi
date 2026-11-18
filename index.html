@@ -13,7 +13,6 @@
   <header class="header">
     <div class="logo">File <span>Studio</span></div>
     <div style="display: flex; gap: 10px; align-items: center;">
-      <!-- 未ログイン・ログイン中の状態を表示し、クリックでポップアップを開くボタン -->
       <button id="authModalOpenBtn" style="padding: 6px 14px; background: #eeedf8; border: 1px solid #6559bb; color: #6559bb; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">
         <span id="auth-status-text">未ログイン</span>
       </button>
@@ -21,14 +20,13 @@
     </div>
   </header>
 
-  <!-- 認証ポップアップ（初期状態で style="display: none;" により確実に非表示） -->
+  <!-- 認証ポップアップ -->
   <div id="authModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
     <div style="background: #fff; padding: 30px; border-radius: 16px; width: 90%; max-width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; box-sizing: border-box;">
       <button id="authModalCloseBtn" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #888;">✕</button>
       
       <h3 style="margin-bottom: 20px; font-size: 1.2rem; color: #252535;">アカウント認証（履歴の同期用）</h3>
       
-      <!-- ログアウト中の表示 -->
       <div id="auth-logged-out-view">
         <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
           <input type="email" id="authEmail" placeholder="メールアドレス" style="padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; width: 100%; box-sizing: border-box;">
@@ -40,7 +38,6 @@
         </div>
       </div>
 
-      <!-- ログイン中の表示 -->
       <div id="auth-logged-in-view" style="display: none; flex-direction: column; gap: 18px;">
         <span id="user-email-display" style="font-weight: bold; color: #333; word-break: break-all; font-size: 1rem;"></span>
         <button id="logoutBtn" style="padding: 12px; background: #d73a49; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem;">ログアウト</button>
@@ -90,6 +87,24 @@
 
       <button id="convertBtn" class="main-btn" disabled>変換する</button>
       <div id="status"></div>
+
+      <!-- ファイル変換完了後に表示される外部ストレージ連携エリア -->
+      <div id="convertResultArea" class="result-area hidden" style="margin-top: 15px; display: none; flex-direction: column; gap: 8px; background: #f6f8fa; padding: 12px; border-radius: 8px; border: 1px solid #d0d7de;">
+        <span class="result-area-msg" style="font-weight: bold; color: #16845b; font-size: 0.9rem;">✨ ファイルを変換しました！</span>
+        
+        <div style="border-top: 1px dashed #ccc; padding-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <button id="openGigafileBtn-convert" style="padding: 4px 8px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">ギガ便</button>
+            <input type="text" id="gigafileUrl-convert" placeholder="ギガファイル便URL" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
+            <button id="saveGigafileBtn-convert" style="padding: 4px 8px; background: #6559bb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <button id="openDropboxBtn-convert" style="padding: 4px 8px; background: #fff; border: 1px solid #0061fe; color: #0061fe; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Dropbox</button>
+            <input type="text" id="dropboxUrl-convert" placeholder="Dropbox共有リンク" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
+            <button id="saveDropboxBtn-convert" style="padding: 4px 8px; background: #0061fe; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 2. PDF編集セクション -->
@@ -126,6 +141,19 @@
       <div id="pdfResultArea" class="result-area hidden" style="display: none;">
         <span id="pdfSuccessMsg" class="result-area-msg">📄 編集したPDFを作成しました！</span>
         <button id="pdfDownloadBtn" class="result-area-btn">ダウンロード</button>
+
+        <div style="margin-top: 12px; border-top: 1px dashed #ccc; padding-top: 10px; width: 100%; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <button id="openGigafileBtn-pdf" style="padding: 4px 8px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">ギガ便</button>
+            <input type="text" id="gigafileUrl-pdf" placeholder="ギガファイル便URL" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
+            <button id="saveGigafileBtn-pdf" style="padding: 4px 8px; background: #6559bb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <button id="openDropboxBtn-pdf" style="padding: 4px 8px; background: #fff; border: 1px solid #0061fe; color: #0061fe; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Dropbox</button>
+            <input type="text" id="dropboxUrl-pdf" placeholder="Dropbox共有リンク" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
+            <button id="saveDropboxBtn-pdf" style="padding: 4px 8px; background: #0061fe; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
+          </div>
+        </div>
       </div>
 
       <div id="pdfStatus" style="margin-top: 15px; color: #555;"></div>
@@ -160,6 +188,19 @@
       <div id="zipResultArea" class="result-area hidden" style="display: none;">
         <span id="zipSuccessMsg" class="result-area-msg">📦 圧縮できました！</span>
         <button id="zipDownloadBtn" class="result-area-btn">ダウンロード</button>
+
+        <div style="margin-top: 12px; border-top: 1px dashed #ccc; padding-top: 10px; width: 100%; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <button id="openGigafileBtn-zip" style="padding: 4px 8px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">ギガ便</button>
+            <input type="text" id="gigafileUrl-zip" placeholder="ギガファイル便URL" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
+            <button id="saveGigafileBtn-zip" style="padding: 4px 8px; background: #6559bb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
+          </div>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+            <button id="openDropboxBtn-zip" style="padding: 4px 8px; background: #fff; border: 1px solid #0061fe; color: #0061fe; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Dropbox</button>
+            <input type="text" id="dropboxUrl-zip" placeholder="Dropbox共有リンク" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
+            <button id="saveDropboxBtn-zip" style="padding: 4px 8px; background: #0061fe; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -169,7 +210,7 @@
       <div id="favoriteSettings"></div>
     </section>
 
-    <!-- 5. 操作履歴セクション（ファイル変換・PDF編集・ZIP圧縮などのメイン機能の下に配置） -->
+    <!-- 5. 操作履歴セクション -->
     <div id="history-section" class="hidden" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 30px; margin-bottom: 25px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h3 style="margin: 0; font-size: 1.1rem;">📋 操作履歴（ファイル名・ダウンロード・同期）</h3>
