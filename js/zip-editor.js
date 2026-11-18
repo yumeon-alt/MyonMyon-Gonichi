@@ -32,14 +32,31 @@
     return (size / (1024 * 1024)).toFixed(1) + " MB";
   }
 
-  function getFileIcon(file) {
+  // ファイルの種類に応じた画像アイコンのHTMLを返す関数（128x128サイズ・上部余白詰め）
+  function getFileIconHtml(file) {
     const ext = file.name.split(".").pop().toLowerCase();
-    if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "avif", "heic", "heif", "tif", "tiff"].includes(ext)) {
-      return "🖼️";
+    
+    let imgPath = "images/?.png"; // デフォルト（HEICやその他）
+    let label = "ファイル";
+
+    if (["png"].includes(ext)) {
+      imgPath = "images/image.png";
+      label = "PNG画像";
+    } else if (["jpg", "jpeg"].includes(ext)) {
+      imgPath = "images/jpg.png";
+      label = "JPEG画像";
+    } else if (["gif", "webp", "bmp", "svg", "avif", "tif", "tiff"].includes(ext)) {
+      imgPath = "images/image.png";
+      label = "画像";
+    } else if (ext === "pdf") {
+      imgPath = "images/pdf.png";
+      label = "PDF";
+    } else if (["zip", "rar", "7z"].includes(ext)) {
+      imgPath = "images/zip.png";
+      label = "ZIP";
     }
-    if (ext === "pdf") return "📕";
-    if (["zip", "rar", "7z"].includes(ext)) return "🗜️";
-    return "📄";
+
+    return `<div style="text-align: center; margin-top: -12px; margin-bottom: 0;"><img src="${imgPath}" width="128" height="128" style="display: inline-block; object-fit: contain;" alt="${label}"></div>`;
   }
 
   function hideZipResult() {
@@ -398,10 +415,9 @@
         card.draggable = true;
         setupItemDragEvents(card, { type: "file", id: item.id });
 
-        const icon = document.createElement("span");
+        const icon = document.createElement("div");
         icon.className = "file-icon";
-        icon.style.fontSize = "32px";
-        icon.textContent = getFileIcon(item.file);
+        icon.innerHTML = getFileIconHtml(item.file);
         icon.style.pointerEvents = "none";
 
         const nameSpan = document.createElement("span");
@@ -528,7 +544,7 @@
 
       const icon = document.createElement("span");
       icon.className = "file-icon";
-      icon.textContent = getFileIcon(item.file);
+      icon.innerHTML = getFileIconHtml(item.file);
       icon.style.pointerEvents = "none";
 
       const name = document.createElement("span");
