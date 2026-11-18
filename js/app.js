@@ -44,21 +44,18 @@ function initModalEvents() {
   const authModalOpenBtn = $("authModalOpenBtn");
   const authModalCloseBtn = $("authModalCloseBtn");
 
-  // モーダルを開く
   if (authModalOpenBtn && authModal) {
     authModalOpenBtn.addEventListener("click", () => {
       authModal.style.display = "flex";
     });
   }
 
-  // モーダルを閉じる（✕ボタン）
   if (authModalCloseBtn && authModal) {
     authModalCloseBtn.addEventListener("click", () => {
       authModal.style.display = "none";
     });
   }
 
-  // モーダルの背景クリックで閉じる
   if (authModal) {
     authModal.addEventListener("click", (e) => {
       if (e.target === authModal) {
@@ -68,7 +65,6 @@ function initModalEvents() {
   }
 }
 
-// 読み込み時に即座にイベントを登録
 initModalEvents();
 
 // Firebase 認証 & 履歴管理の初期化待機
@@ -76,6 +72,7 @@ const checkInterval = setInterval(() => {
   if (window.firebaseAuth && window.firebaseDb) {
     clearInterval(checkInterval);
     initAuthSystem();
+    initGigafileHandlers();
   }
 }, 100);
 
@@ -175,7 +172,6 @@ function initAuthSystem() {
     }
   });
 
-  // 履歴をすべて削除するボタン
   const clearHistoryBtn = $("clearHistoryBtn");
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener("click", async () => {
@@ -199,6 +195,75 @@ function initAuthSystem() {
   }
 }
 
+// ==========================================
+// ギガファイル便のリンク保存＆オープン処理
+// ==========================================
+function initGigafileHandlers() {
+  const setupHandler = (type, getFileNameFn) => {
+    const openBtn = $(`openGigafileBtn-${type}`);
+    const saveBtn = $(`saveGigafileBtn-${type}`);
+    const urlInput = $(`gigafileUrl-${type}`);
+
+    if (openBtn) {
+      openBtn.addEventListener('click', () => {
+        window.open('https://gigafile.nu/', '_blank');
+      });
+    }
+
+    if (saveBtn && urlInput) {
+      saveBtn.addEventListener('click', async () => {
+        const url = urlInput.value.trim();
+        if (!url) {
+          alert('ギガファイル便のURLを入力してください。');
+          return;
+        }
+
+        const auth = window.firebaseAuth;
+        const db = window.firebaseDb;
+        if (!auth || !auth.currentUser || !db) {
+          alert('履歴に保存するにはログインが必要です。');
+          return;
+        }
+
+        const fileName = getFileNameFn();
+        const actionType = type === 'convert' ? 'image-convert' : type === 'pdf' ? 'pdf-editor' : 'zip-compression';
+
+        try {
+          const { collection, addDoc, serverTimestamp } = window.firebaseFirestoreFns;
+          await addDoc(collection(db, "histories"), {
+            uid: auth.currentUser.uid,
+            actionType: actionType,
+            details: { fileName: fileName, gigafileUrl: url },
+            createdAt: serverTimestamp()
+          });
+
+          alert('ギガファイル便のリンクを履歴に保存しました！PCからログインして確認できます。');
+          urlInput.value = '';
+          loadUserHistories(auth.currentUser.uid);
+        } catch (err) {
+          console.error("ギガファイル便リンクの保存エラー:", err);
+          alert('保存に失敗しました。');
+        }
+      });
+    }
+  };
+
+  setupHandler('convert', () => {
+    const fnElem = $('fileName');
+    return fnElem && fnElem.textContent ? fnElem.textContent : "変換ファイル";
+  });
+
+  setupHandler('pdf', () => {
+    const outName = $('pdfOutputName');
+    return outName ? outName.value : "merged.pdf";
+  });
+
+  setupHandler('zip', () => {
+    const zName = $('zipName');
+    return zName ? zName.value : "archive.zip";
+  });
+}
+
 // Firestore への履歴保存用グローバル関数
 window.saveUserHistory = async function(actionType, details) {
   const auth = window.firebaseAuth;
@@ -206,7 +271,7 @@ window.saveUserHistory = async function(actionType, details) {
   if (!auth || !db) return;
 
   const user = auth.currentUser;
-  if (!user) return; // 未ログイン時は保存しない
+  if (!user) return;
 
   try {
     const { collection, addDoc, serverTimestamp } = window.firebaseFirestoreFns;
@@ -252,75 +317,41 @@ function renderHistoryList(histories) {
 
   listEl.innerHTML = "";
   if (histories.length === 0) {
-    listEl.innerHTML = "<li style='color: #888; padding: 8px;'>履歴はまだありません。</li>";
+    listEl.innerHTML = "<li style='color: #888; padding: 6px 8px;'>履歴はまだありません。</li>";
     return;
   }
 
   histories.forEach(item => {
     const li = document.createElement("li");
-    li.style.padding = "10px 12px";
-    li.style.background = "#f8f9fa";
-    li.style.border = "1px solid #e1e4e8";
-    li.style.borderRadius = "8px";
+    li.style.padding = "8px";
+    li.style.borderBottom = "1px solid #f0f0f0";
     li.style.display = "flex";
     li.style.justifyContent = "space-between";
     li.style.alignItems = "center";
-    li.style.gap = "10px";
     
     const dateStr = item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : "同期中...";
     const typeLabel = item.actionType === "image-convert" ? "🖼️ 変換" : item.actionType === "pdf-editor" ? "📕 PDF編集" : "📦 ZIP圧縮";
     
-    // ファイル名の取得
-    const fileName = item.details?.fileName || item.details?.outputName || "ファイル";
+    const textSpan = document.createElement("span");
+    
+    // 詳細データの中にギガファイル便のURLがあるかどうかで表示を切り替え
+    let rightAreaHtml = "";
+    if (item.details && item.details.gigafileUrl) {
+      textSpan.textContent = `[${dateStr}] ${typeLabel}: ${item.details.fileName || "ファイル"} (ギガファイル便共有)`;
+      rightAreaHtml = `<a href="${item.details.gigafileUrl}" target="_blank" style="padding: 4px 10px; background: #2ea44f; color: #fff; text-decoration: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">📤 ギガファイル便を開く</a>`;
+    } else {
+      textSpan.textContent = `[${dateStr}] ${typeLabel}: ${JSON.stringify(item.details)}`;
+    }
 
-    const leftDiv = document.createElement("div");
-    leftDiv.style.display = "flex";
-    leftDiv.style.flexDirection = "column";
-    leftDiv.style.gap = "2px";
-
-    const typeSpan = document.createElement("span");
-    typeSpan.style.fontSize = "0.75rem";
-    typeSpan.style.color = "#666";
-    typeSpan.textContent = `${dateStr} ｜ ${typeLabel}`;
-
-    const nameSpan = document.createElement("span");
-    nameSpan.style.fontWeight = "bold";
-    nameSpan.style.fontSize = "0.95rem";
-    nameSpan.style.color = "#252535";
-    nameSpan.textContent = fileName;
-
-    leftDiv.append(typeSpan, nameSpan);
-
-    const rightDiv = document.createElement("div");
-    rightDiv.style.display = "flex";
-    rightDiv.style.gap = "8px";
-    rightDiv.style.alignItems = "center";
-
-    // ダウンロードボタン
-    const downloadBtn = document.createElement("button");
-    downloadBtn.textContent = "ダウンロード";
-    downloadBtn.style.padding = "4px 10px";
-    downloadBtn.style.background = "#2ea44f";
-    downloadBtn.style.color = "#fff";
-    downloadBtn.style.border = "none";
-    downloadBtn.style.borderRadius = "4px";
-    downloadBtn.style.cursor = "pointer";
-    downloadBtn.style.fontSize = "0.8rem";
-
-    downloadBtn.addEventListener("click", () => {
-      alert(`「${fileName}」の履歴情報です。ファイルの実データは変換時に自動保存されたブラウザのダウンロードフォルダをご確認ください。`);
-    });
-
-    // 削除ボタン
     const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "削除";
-    deleteBtn.style.padding = "4px 10px";
-    deleteBtn.style.background = "#fff";
-    deleteBtn.style.border = "1px solid #d73a49";
+    deleteBtn.textContent = "🗑️";
+    deleteBtn.style.background = "none";
+    deleteBtn.style.border = "none";
     deleteBtn.style.color = "#d73a49";
-    deleteBtn.style.borderRadius = "4px";
     deleteBtn.style.cursor = "pointer";
-    deleteBtn.style.fontSize = "0.8rem";
+    deleteBtn.style.fontSize = "0.9rem";
+    deleteBtn.style.marginLeft = "10px";
+    deleteBtn.title = "削除";
 
     deleteBtn.addEventListener("click", async () => {
       try {
@@ -336,8 +367,28 @@ function renderHistoryList(histories) {
       }
     });
 
-    rightDiv.append(downloadBtn, deleteBtn);
-    li.append(leftDiv, rightDiv);
+    const leftContainer = document.createElement("div");
+    leftContainer.style.display = "flex";
+    leftContainer.style.alignItems = "center";
+    leftContainer.style.overflow = "hidden";
+    leftContainer.style.textOverflow = "ellipsis";
+    leftContainer.style.whiteSpace = "nowrap";
+    leftContainer.style.marginRight = "10px";
+    leftContainer.appendChild(textSpan);
+
+    const rightContainer = document.createElement("div");
+    rightContainer.style.display = "flex";
+    rightContainer.style.alignItems = "center";
+    rightContainer.style.flexShrink = "0";
+    
+    if (rightAreaHtml) {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = rightAreaHtml;
+      rightContainer.appendChild(tempDiv.firstElementChild);
+    }
+    rightContainer.appendChild(deleteBtn);
+
+    li.append(leftContainer, rightContainer);
     listEl.appendChild(li);
   });
 }
@@ -345,7 +396,7 @@ function renderHistoryList(histories) {
 function clearHistoryUI() {
   const listEl = $("history-list");
   if (listEl) {
-    listEl.innerHTML = "<li style='color: #888; padding: 8px;'>ログインすると履歴が表示されます。</li>";
+    listEl.innerHTML = "<li style='color: #888; padding: 6px 8px;'>ログインすると履歴が表示されます。</li>";
   }
 }
 
@@ -538,7 +589,7 @@ if ($("convertBtn")) {
     }
 
     if (!selectedFormat) {
-      setStatus("変換などの操作を行ってください。", true);
+      setStatus("変換先の形式を選択してください。", true);
       return;
     }
 
@@ -571,7 +622,6 @@ if ($("convertBtn")) {
         success++;
         successfulFiles.push(file);
         
-        // Firestoreへの履歴保存
         if (typeof window.saveUserHistory === "function") {
           await window.saveUserHistory("image-convert", { fileName: outputName, format: selectedFormat });
         }
