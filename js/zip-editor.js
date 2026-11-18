@@ -22,8 +22,7 @@
   let currentFolder = null;
   let currentViewMode = "thumb"; // "thumb", "text", "tree"
   let uniqueId = 1;
-  let draggedIndex = null;
-  let targetInsertIndex = null;
+  let draggedItem = null; // { type: 'file' | 'folder', id: number }
   let generatedZipBlob = null;
 
   function formatFileSize(size) {
@@ -113,7 +112,7 @@
       zipDropZone.addEventListener(evt, e => {
         e.preventDefault();
         e.stopPropagation();
-        if (draggedIndex === null) {
+        if (!draggedItem) {
           zipDropZone.classList.add("drag-over");
         }
       });
@@ -121,7 +120,7 @@
 
     ["dragleave", "drop"].forEach(evt => {
       zipDropZone.addEventListener(evt, e => {
-        if (draggedIndex !== null) return;
+        if (draggedItem) return;
         e.preventDefault();
         e.stopPropagation();
         zipDropZone.classList.remove("drag-over");
@@ -129,7 +128,7 @@
     });
 
     zipDropZone.addEventListener("drop", (e) => {
-      if (draggedIndex !== null) return;
+      if (draggedItem) return;
       e.preventDefault();
       e.stopPropagation();
       zipDropZone.classList.remove("drag-over");
@@ -163,21 +162,87 @@
     renderZipFiles();
   }
 
+  // フォルダパス（パンくず）の描画＆ドロップ領域設定
   function updateFolderPath() {
     if (!zipPath) return;
-    const names = [];
+    zipPath.innerHTML = "";
+
+    const pathChain = [{ id: null, name: "📁 ZIP圧縮対象ファイル" }];
     let id = currentFolder;
+    const tempChain = [];
     while (id !== null) {
       const folder = zipFolders.find(f => f.id === id);
       if (!folder) break;
-      names.unshift(folder.name);
+      tempChain.unshift({ id: folder.id, name: folder.name });
       id = folder.parentId;
     }
-    zipPath.textContent = "📁 ZIP圧縮対象ファイル" + (names.length ? " / " + names.join(" / ") : "");
+    const fullChain = pathChain.concat(tempChain);
+
+    fullChain.forEach((crumb, index) => {
+      if (index > 0) {
+        const sep = document.createElement("span");
+        sep.textContent = " / ";
+        sep.style.color = "#999";
+        sep.style.margin = "0 4px";
+        zipPath.appendChild(sep);
+      }
+
+      const link = document.createElement("span");
+      link.textContent = crumb.name;
+      link.style.cursor = "pointer";
+      link.style.padding = "2px 4px";
+      link.style.borderRadius = "4px";
+
+      link.addEventListener("click", () => {
+        currentFolder = crumb.id;
+        renderZipFiles();
+      });
+
+      // フォルダパスリンクへのドラッグ＆ドロップ移動対応
+      link.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (draggedItem) {
+          link.style.background = "#dce5f3";
+        }
+      });
+      link.addEventListener("dragleave", () => {
+        link.style.background = "transparent";
+      });
+      link.addEventListener("drop", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        link.style.background = "transparent";
+        if (draggedItem) {
+          moveItemToFolder(draggedItem, crumb.id);
+        }
+      });
+
+      zipPath.appendChild(link);
+    });
   }
 
   function openFolder(id) {
     currentFolder = id;
+    renderZipFiles();
+  }
+
+  function moveItemToFolder(itemInfo, targetFolderId) {
+    if (itemInfo.type === "file") {
+      const file = zipFiles.find(f => f.id === itemInfo.id);
+      if (file) file.folderId = targetFolderId;
+    } else if (itemInfo.type === "folder") {
+      if (itemInfo.id === targetFolderId) return; // 自分自身には移動不可
+      // 移動先が自分の子孫フォルダかチェック
+      let checkId = targetFolderId;
+      while (checkId !== null) {
+        if (checkId === itemInfo.id) return; // ループ防止
+        const f = zipFolders.find(fold => fold.id === checkId);
+        checkId = f ? f.parentId : null;
+      }
+      const folder = zipFolders.find(f => f.id === itemInfo.id);
+      if (folder) folder.parentId = targetFolderId;
+    }
+    hideZipResult();
     renderZipFiles();
   }
 
@@ -225,18 +290,24 @@
     zipDropZone.classList.add("has-files");
 
     if (currentViewMode === "thumb") {
-      // フォルダ表示（アイコン）
+      // フォルダ表示（アイコン表示）
       currentFolders.forEach(folder => {
         const card = document.createElement("div");
         card.className = "pdf-page-item-card";
+        card.draggable = true;
+
+        setupItemDragEvents(card, { type: "folder", id: folder.id });
+        setupFolderDropEvents(card, folder.id);
 
         const icon = document.createElement("span");
         icon.style.fontSize = "32px";
         icon.textContent = "📁";
+        icon.style.pointerEvents = "none";
 
         const nameSpan = document.createElement("span");
         nameSpan.className = "file-name";
         nameSpan.textContent = folder.name;
+        nameSpan.style.pointerEvents = "none";
 
         const delBtn = document.createElement("button");
         delBtn.textContent = "削除";
@@ -246,26 +317,24 @@
           deleteFolder(folder.id);
         });
 
-        card.addEventListener("click", () => openFolder(folder.id));
+        card.addEventListener("dblclick", () => openFolder(folder.id));
         card.append(icon, nameSpan, delBtn);
         zipDropZone.appendChild(card);
       });
 
-      // ファイル表示（アイコン）
-      currentFiles.forEach((item, index) => {
-        const globalIndex = zipFiles.indexOf(item);
+      // ファイル表示（アイコン表示）
+      currentFiles.forEach(item => {
         const card = document.createElement("div");
         card.className = "pdf-page-item-card";
-        card.dataset.index = globalIndex;
         card.draggable = true;
 
-        setupDragEvents(card, globalIndex, "thumb", zipDropZone);
+        setupItemDragEvents(card, { type: "file", id: item.id });
 
         const icon = document.createElement("span");
         icon.className = "file-icon";
         icon.style.fontSize = "32px";
         icon.textContent = getFileIcon(item.file);
-        card.appendChild(icon);
+        icon.style.pointerEvents = "none";
 
         const nameSpan = document.createElement("span");
         nameSpan.className = "file-name";
@@ -275,68 +344,60 @@
         const ctrlArea = document.createElement("div");
         ctrlArea.className = "ctrl-area";
 
-        const upBtn = document.createElement("button");
-        upBtn.textContent = "◀";
-        upBtn.disabled = index === 0;
-        upBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          moveFile(globalIndex, globalIndex - 1);
-        });
-
-        const downBtn = document.createElement("button");
-        downBtn.textContent = "▶";
-        downBtn.disabled = index === currentFiles.length - 1;
-        downBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          moveFile(globalIndex, globalIndex + 1);
-        });
-
         const delBtn = document.createElement("button");
         delBtn.textContent = "✕";
         delBtn.className = "del-btn";
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          removeFile(globalIndex);
+          removeFileById(item.id);
         });
 
-        ctrlArea.append(upBtn, downBtn, delBtn);
-        card.append(nameSpan, ctrlArea);
+        ctrlArea.appendChild(delBtn);
+        card.append(icon, nameSpan, ctrlArea);
         zipDropZone.appendChild(card);
       });
 
     } else {
-      // フォルダ表示（リスト）
+      // フォルダ表示（リスト表示）
       currentFolders.forEach(folder => {
         const row = document.createElement("div");
         row.className = "file-item folder-item";
+        row.draggable = true;
+
+        setupItemDragEvents(row, { type: "folder", id: folder.id });
+        setupFolderDropEvents(row, folder.id);
+
         row.innerHTML = `
-          <span class="file-icon">📁</span>
-          <span class="file-name">${escapeHTML(folder.name)}</span>
+          <span class="file-icon" style="pointer-events:none;">📁</span>
+          <span class="file-name" style="pointer-events:none;">${escapeHTML(folder.name)}</span>
           <button class="delete-file" title="フォルダを削除">削除</button>
         `;
-        row.querySelector(".file-name").addEventListener("click", (e) => { e.stopPropagation(); openFolder(folder.id); });
-        row.querySelector(".file-icon").addEventListener("click", (e) => { e.stopPropagation(); openFolder(folder.id); });
-        row.querySelector(".delete-file").addEventListener("click", e => { e.stopPropagation(); deleteFolder(folder.id); });
+
+        row.addEventListener("dblclick", () => openFolder(folder.id));
+        row.querySelector(".delete-file").addEventListener("click", e => {
+          e.stopPropagation();
+          deleteFolder(folder.id);
+        });
         zipDropZone.appendChild(row);
       });
 
-      // ファイル表示（リスト）
-      currentFiles.forEach((item, index) => {
-        const globalIndex = zipFiles.indexOf(item);
+      // ファイル表示（リスト表示）
+      currentFiles.forEach(item => {
         const row = document.createElement("div");
         row.className = "file-item";
-        row.dataset.index = globalIndex;
         row.draggable = true;
 
-        setupDragEvents(row, globalIndex, "text", zipDropZone);
+        setupItemDragEvents(row, { type: "file", id: item.id });
 
         const icon = document.createElement("span");
         icon.className = "file-icon";
         icon.textContent = getFileIcon(item.file);
+        icon.style.pointerEvents = "none";
 
         const name = document.createElement("span");
         name.className = "file-name";
         name.textContent = item.displayName;
+        name.style.pointerEvents = "none";
 
         const info = document.createElement("span");
         info.className = "file-info";
@@ -351,7 +412,7 @@
         delBtn.textContent = "削除";
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          removeFile(globalIndex);
+          removeFileById(item.id);
         });
 
         ctrlArea.appendChild(delBtn);
@@ -367,13 +428,17 @@
       const row = document.createElement("div");
       row.className = "file-item folder-item";
       row.style.paddingLeft = (10 + depth * 22) + "px";
+      row.draggable = true;
+
+      setupItemDragEvents(row, { type: "folder", id: folder.id });
+      setupFolderDropEvents(row, folder.id);
+
       row.innerHTML = `
-        <span class="file-icon">📁</span>
-        <span class="file-name">${escapeHTML(folder.name)}</span>
+        <span class="file-icon" style="pointer-events:none;">📁</span>
+        <span class="file-name" style="pointer-events:none;">${escapeHTML(folder.name)}</span>
         <button class="delete-file" title="フォルダを削除">削除</button>
       `;
-      row.querySelector(".file-name").addEventListener("click", (e) => { e.stopPropagation(); openFolder(folder.id); });
-      row.querySelector(".file-icon").addEventListener("click", (e) => { e.stopPropagation(); openFolder(folder.id); });
+      row.addEventListener("dblclick", () => openFolder(folder.id));
       row.querySelector(".delete-file").addEventListener("click", e => { e.stopPropagation(); deleteFolder(folder.id); });
       zipDropZone.appendChild(row);
 
@@ -397,14 +462,19 @@
     const row = document.createElement("div");
     row.className = "file-item";
     row.style.paddingLeft = (10 + depth * 22) + "px";
+    row.draggable = true;
+
+    setupItemDragEvents(row, { type: "file", id: item.id });
 
     const icon = document.createElement("span");
     icon.className = "file-icon";
     icon.textContent = getFileIcon(item.file);
+    icon.style.pointerEvents = "none";
 
     const name = document.createElement("span");
     name.className = "file-name";
     name.textContent = item.displayName;
+    name.style.pointerEvents = "none";
 
     const info = document.createElement("span");
     info.className = "file-info";
@@ -415,12 +485,52 @@
     delBtn.textContent = "削除";
     delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const idx = zipFiles.indexOf(item);
-      if (idx !== -1) removeFile(idx);
+      removeFileById(item.id);
     });
 
     row.append(icon, name, info, delBtn);
     return row;
+  }
+
+  // ドラッグ開始・終了の登録
+  function setupItemDragEvents(element, itemInfo) {
+    element.addEventListener("dragstart", (e) => {
+      draggedItem = itemInfo;
+      element.style.opacity = "0.4";
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", JSON.stringify(itemInfo));
+    });
+
+    element.addEventListener("dragend", () => {
+      element.style.opacity = "1";
+      draggedItem = null;
+    });
+  }
+
+  // フォルダに対してドロップされた時の登録
+  function setupFolderDropEvents(element, targetFolderId) {
+    element.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      if (draggedItem && (draggedItem.type !== "folder" || draggedItem.id !== targetFolderId)) {
+        element.style.border = "2px dashed #6559bb";
+        element.style.background = "#f6f4ff";
+      }
+    });
+
+    element.addEventListener("dragleave", () => {
+      element.style.border = "";
+      element.style.background = "";
+    });
+
+    element.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      element.style.border = "";
+      element.style.background = "";
+      if (draggedItem) {
+        moveItemToFolder(draggedItem, targetFolderId);
+      }
+    });
   }
 
   function escapeHTML(str) {
@@ -443,102 +553,13 @@
     renderZipFiles();
   }
 
-  function setupDragEvents(element, index, mode, container) {
-    element.addEventListener("dragstart", (e) => {
-      draggedIndex = index;
-      targetInsertIndex = null;
-      element.style.opacity = "0.3";
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", index);
-    });
-
-    element.addEventListener("dragend", (e) => {
-      e.preventDefault();
-      element.style.opacity = "1";
-      commitMove();
-    });
-
-    element.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      if (draggedIndex === null) return;
-      const rect = element.getBoundingClientRect();
-
-      if (mode === "thumb") {
-        const isLeft = e.clientX - rect.left < rect.width / 2;
-        targetInsertIndex = isLeft ? index : index + 1;
-        showGuideLine(element, isLeft ? "before" : "after", mode, container);
-      } else {
-        const isTop = e.clientY - rect.top < rect.height / 2;
-        targetInsertIndex = isTop ? index : index + 1;
-        showGuideLine(element, isTop ? "before" : "after", mode, container);
-      }
-    });
-
-    element.addEventListener("drop", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      commitMove();
-    });
-  }
-
-  function commitMove() {
-    if (draggedIndex !== null && targetInsertIndex !== null) {
-      let fromIdx = draggedIndex;
-      let toIdx = targetInsertIndex;
-      if (fromIdx < toIdx) toIdx--;
-      if (fromIdx !== toIdx) moveFile(fromIdx, toIdx);
-    }
-    draggedIndex = null;
-    targetInsertIndex = null;
-    removeGuideLine();
-  }
-
-  function showGuideLine(targetEl, position, mode, container) {
-    removeGuideLine();
-    const guide = document.createElement("div");
-    guide.className = "pdf-drag-guide";
-    guide.style.background = "#6559bb";
-    guide.style.borderRadius = "2px";
-    guide.style.pointerEvents = "none";
-    guide.style.boxShadow = "0 0 6px rgba(101, 89, 187, 0.6)";
-
-    if (mode === "thumb") {
-      guide.style.width = "4px";
-      guide.style.height = "140px";
-      guide.style.margin = "0 -6px";
-    } else {
-      guide.style.width = "100%";
-      guide.style.height = "4px";
-      guide.style.margin = "-4px 0";
-    }
-
-    if (position === "before") {
-      container.insertBefore(guide, targetEl);
-    } else {
-      container.insertBefore(guide, targetEl.nextSibling);
-    }
-  }
-
-  function removeGuideLine() {
-    document.querySelectorAll(".pdf-drag-guide").forEach(el => el.remove());
-  }
-
-  function moveFile(fromIndex, toIndex) {
-    if (toIndex < 0 || toIndex >= zipFiles.length) return;
-    const target = zipFiles.splice(fromIndex, 1)[0];
-    zipFiles.splice(toIndex, 0, target);
+  function removeFileById(id) {
+    zipFiles = zipFiles.filter(f => f.id !== id);
     hideZipResult();
     renderZipFiles();
   }
 
-  function removeFile(index) {
-    zipFiles.splice(index, 1);
-    hideZipResult();
-    renderZipFiles();
-  }
-
-  // フルパスを生成する関数（フォルダ階層維持用）
+  // フルパスを生成する関数（ZIP出力時のフォルダ構造維持用）
   function getFullFilePath(item) {
     const pathParts = [item.file.name];
     let id = item.folderId;
