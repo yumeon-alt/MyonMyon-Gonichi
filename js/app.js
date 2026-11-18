@@ -44,21 +44,18 @@ function initModalEvents() {
   const authModalOpenBtn = $("authModalOpenBtn");
   const authModalCloseBtn = $("authModalCloseBtn");
 
-  // モーダルを開く
   if (authModalOpenBtn && authModal) {
     authModalOpenBtn.addEventListener("click", () => {
       authModal.style.display = "flex";
     });
   }
 
-  // モーダルを閉じる（✕ボタン）
   if (authModalCloseBtn && authModal) {
     authModalCloseBtn.addEventListener("click", () => {
       authModal.style.display = "none";
     });
   }
 
-  // モーダルの背景クリックで閉じる
   if (authModal) {
     authModal.addEventListener("click", (e) => {
       if (e.target === authModal) {
@@ -68,7 +65,6 @@ function initModalEvents() {
   }
 }
 
-// 読み込み時に即座にイベントを登録
 initModalEvents();
 
 // Firebase 認証 & 履歴管理の初期化待機
@@ -76,6 +72,7 @@ const checkInterval = setInterval(() => {
   if (window.firebaseAuth && window.firebaseDb) {
     clearInterval(checkInterval);
     initAuthSystem();
+    initGigafileHandlers();
   }
 }, 100);
 
@@ -99,7 +96,6 @@ function initAuthSystem() {
       const email = $("authEmail").value.trim();
       const password = $("authPassword").value;
       
-      // メールアドレスの簡単な形式チェック
       if (!email || !email.includes("@")) {
         alert("正しいメールアドレスを入力してください。");
         return;
@@ -124,12 +120,10 @@ function initAuthSystem() {
       const email = $("authEmail").value.trim();
       const password = $("authPassword").value;
       
-      // メールアドレスの形式チェック
       if (!email || !email.includes("@")) {
         alert("正しいメールアドレスを入力してください。");
         return;
       }
-      // パスワードの文字数チェック（6文字以上）
       if (!password || password.length < 6) {
         alert("パスワードは6文字以上にしてください。");
         return;
@@ -178,7 +172,6 @@ function initAuthSystem() {
     }
   });
 
-  // 履歴をすべて削除するボタン
   const clearHistoryBtn = $("clearHistoryBtn");
   if (clearHistoryBtn) {
     clearHistoryBtn.addEventListener("click", async () => {
@@ -200,6 +193,75 @@ function initAuthSystem() {
       }
     });
   }
+}
+
+// ==========================================
+// ギガファイル便のリンク保存＆オープン処理
+// ==========================================
+function initGigafileHandlers() {
+  const setupHandler = (type, getFileNameFn) => {
+    const openBtn = $(`openGigafileBtn-${type}`);
+    const saveBtn = $(`saveGigafileBtn-${type}`);
+    const urlInput = $(`gigafileUrl-${type}`);
+
+    if (openBtn) {
+      openBtn.addEventListener('click', () => {
+        window.open('https://gigafile.nu/', '_blank');
+      });
+    }
+
+    if (saveBtn && urlInput) {
+      saveBtn.addEventListener('click', async () => {
+        const url = urlInput.value.trim();
+        if (!url) {
+          alert('ギガファイル便のURLを入力してください。');
+          return;
+        }
+
+        const auth = window.firebaseAuth;
+        const db = window.firebaseDb;
+        if (!auth || !auth.currentUser || !db) {
+          alert('履歴に保存するにはログインが必要です。');
+          return;
+        }
+
+        const fileName = getFileNameFn();
+        const actionType = type === 'convert' ? 'image-convert' : type === 'pdf' ? 'pdf-editor' : 'zip-compression';
+
+        try {
+          const { collection, addDoc, serverTimestamp } = window.firebaseFirestoreFns;
+          await addDoc(collection(db, "histories"), {
+            uid: auth.currentUser.uid,
+            actionType: actionType,
+            details: { fileName: fileName, gigafileUrl: url },
+            createdAt: serverTimestamp()
+          });
+
+          alert('ギガファイル便のリンクを履歴に保存しました！PCからログインして確認できます。');
+          urlInput.value = '';
+          loadUserHistories(auth.currentUser.uid);
+        } catch (err) {
+          console.error("ギガファイル便リンクの保存エラー:", err);
+          alert('保存に失敗しました。');
+        }
+      });
+    }
+  };
+
+  setupHandler('convert', () => {
+    const fnElem = $('fileName');
+    return fnElem && fnElem.textContent ? fnElem.textContent : "変換ファイル";
+  });
+
+  setupHandler('pdf', () => {
+    const outName = $('pdfOutputName');
+    return outName ? outName.value : "merged.pdf";
+  });
+
+  setupHandler('zip', () => {
+    const zName = $('zipName');
+    return zName ? zName.value : "archive.zip";
+  });
 }
 
 // Firestore への履歴保存用グローバル関数
@@ -271,17 +333,25 @@ function renderHistoryList(histories) {
     const typeLabel = item.actionType === "image-convert" ? "🖼️ 変換" : item.actionType === "pdf-editor" ? "📕 PDF編集" : "📦 ZIP圧縮";
     
     const textSpan = document.createElement("span");
-    textSpan.textContent = `[${dateStr}] ${typeLabel}: ${JSON.stringify(item.details)}`;
     
-    // 個別の履歴を削除するボタン
+    // 詳細データの中にギガファイル便のURLがあるかどうかで表示を切り替え
+    let rightAreaHtml = "";
+    if (item.details && item.details.gigafileUrl) {
+      textSpan.textContent = `[${dateStr}] ${typeLabel}: ${item.details.fileName || "ファイル"} (ギガファイル便共有)`;
+      rightAreaHtml = `<a href="${item.details.gigafileUrl}" target="_blank" style="padding: 4px 10px; background: #2ea44f; color: #fff; text-decoration: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">📤 ギガファイル便を開く</a>`;
+    } else {
+      textSpan.textContent = `[${dateStr}] ${typeLabel}: ${JSON.stringify(item.details)}`;
+    }
+
     const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "削除";
+    deleteBtn.textContent = "🗑️";
     deleteBtn.style.background = "none";
     deleteBtn.style.border = "none";
     deleteBtn.style.color = "#d73a49";
     deleteBtn.style.cursor = "pointer";
-    deleteBtn.style.fontSize = "0.8rem";
+    deleteBtn.style.fontSize = "0.9rem";
     deleteBtn.style.marginLeft = "10px";
+    deleteBtn.title = "削除";
 
     deleteBtn.addEventListener("click", async () => {
       try {
@@ -297,7 +367,28 @@ function renderHistoryList(histories) {
       }
     });
 
-    li.append(textSpan, deleteBtn);
+    const leftContainer = document.createElement("div");
+    leftContainer.style.display = "flex";
+    leftContainer.style.alignItems = "center";
+    leftContainer.style.overflow = "hidden";
+    leftContainer.style.textOverflow = "ellipsis";
+    leftContainer.style.whiteSpace = "nowrap";
+    leftContainer.style.marginRight = "10px";
+    leftContainer.appendChild(textSpan);
+
+    const rightContainer = document.createElement("div");
+    rightContainer.style.display = "flex";
+    rightContainer.style.alignItems = "center";
+    rightContainer.style.flexShrink = "0";
+    
+    if (rightAreaHtml) {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = rightAreaHtml;
+      rightContainer.appendChild(tempDiv.firstElementChild);
+    }
+    rightContainer.appendChild(deleteBtn);
+
+    li.append(leftContainer, rightContainer);
     listEl.appendChild(li);
   });
 }
