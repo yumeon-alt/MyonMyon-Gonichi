@@ -28,11 +28,11 @@
     );
   }
 
-  // ファイルの種類に応じた画像アイコンのHTMLを返す関数
+  // ファイルの種類に応じた画像アイコンのHTMLを返す関数（デフォルト・その他は file.png）
   function getFileIconHtml(file) {
     const ext = file.name.split(".").pop().toLowerCase();
     
-    let imgPath = "images/hatena.png"; // デフォルト
+    let imgPath = "images/file.png"; // デフォルト
     let label = "ファイル";
 
     if (["png"].includes(ext)) {
@@ -132,7 +132,9 @@
 
   function renderFileList() {
     if (!fileList) return;
-    if (filePath) filePath.textContent = "📁 ファイル";
+    if (filePath) {
+      filePath.innerHTML = `<img src="images/file.png" width="20" height="20" style="vertical-align: middle; margin-right: 4px; object-fit: contain;" alt="ファイル"> ファイル`;
+    }
 
     fileList.innerHTML = "";
     fileList.className = "file-list";
@@ -183,7 +185,6 @@
     row.className = "file-item";
     if (item.selected) row.classList.add("selected");
 
-    // リスト表示のときにフレックスボックスで両端に要素を配置できるようにスタイル調整
     if (currentView === "details") {
       row.style.display = "flex";
       row.style.alignItems = "center";
@@ -220,7 +221,6 @@
       `;
     }
 
-    // 削除ボタン（枠内の一番右側に寄せる設定）
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-file";
     deleteButton.textContent = "削除";
@@ -232,7 +232,7 @@
     deleteButton.style.cursor = "pointer";
     deleteButton.style.padding = "0";
     deleteButton.style.marginLeft = "auto";
-    deleteButton.style.marginRight = "8px"; // 右端から少しだけ余白を開ける
+    deleteButton.style.marginRight = "8px";
 
     deleteButton.addEventListener("mouseenter", () => {
       deleteButton.style.textDecoration = "underline";

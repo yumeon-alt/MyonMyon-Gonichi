@@ -32,11 +32,11 @@
     return (size / (1024 * 1024)).toFixed(1) + " MB";
   }
 
-  // ファイルの種類に応じた画像アイコンのHTMLを返す関数（128x128サイズ・上部余白詰め）
+  // ファイルの種類に応じた画像アイコンのHTMLを返す関数（枠線を完全になくす調整）
   function getFileIconHtml(file) {
     const ext = file.name.split(".").pop().toLowerCase();
     
-    let imgPath = "images/hatena.png"; // デフォルト
+    let imgPath = "images/hatena.png";
     let label = "ファイル";
 
     if (["png"].includes(ext)) {
@@ -56,7 +56,12 @@
       label = "ZIP";
     }
 
-    return `<div style="text-align: center; margin-top: -12px; margin-bottom: 0;"><img src="${imgPath}" width="128" height="128" style="display: inline-block; object-fit: contain;" alt="${label}"></div>`;
+    return `<div style="text-align: center; margin-top: -12px; margin-bottom: 0; background: transparent; border: none; box-shadow: none;"><img src="${imgPath}" width="128" height="128" style="display: inline-block; object-fit: contain; background: transparent; border: none;" alt="${label}"></div>`;
+  }
+
+  // フォルダアイコン（file.png）のHTMLを返す関数（枠線を完全になくす調整）
+  function getFolderIconHtml() {
+    return `<div style="text-align: center; margin-top: -12px; margin-bottom: 0; background: transparent; border: none; box-shadow: none;"><img src="images/file.png" width="128" height="128" style="display: inline-block; object-fit: contain; background: transparent; border: none;" alt="フォルダ"></div>`;
   }
 
   function hideZipResult() {
@@ -231,11 +236,12 @@
     renderZipFiles();
   }
 
+  // パンくずリストの更新
   function updateFolderPath() {
     if (!zipPath) return;
     zipPath.innerHTML = "";
 
-    const pathChain = [{ id: null, name: "📁 ZIP圧縮対象ファイル" }];
+    const pathChain = [{ id: null, name: 'ZIP圧縮対象ファイル' }];
     let id = currentFolder;
     const tempChain = [];
     while (id !== null) {
@@ -256,10 +262,26 @@
       }
 
       const link = document.createElement("span");
-      link.textContent = crumb.name;
+      link.style.display = "inline-flex";
+      link.style.alignItems = "center";
       link.style.cursor = "pointer";
       link.style.padding = "2px 6px";
       link.style.borderRadius = "4px";
+
+      const iconImg = document.createElement("img");
+      iconImg.src = "images/file.png";
+      iconImg.width = 16;
+      iconImg.height = 16;
+      iconImg.style.marginRight = "4px";
+      iconImg.style.objectFit = "contain";
+      iconImg.style.background = "transparent";
+      iconImg.style.border = "none";
+      iconImg.alt = "フォルダ";
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = crumb.name;
+
+      link.append(iconImg, textSpan);
 
       link.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -355,7 +377,7 @@
     zipDropZone.classList.add("has-files");
 
     if (currentViewMode === "thumb") {
-      // フォルダ（アイコン表示）
+      // フォルダ（アイコン表示：file.pngを使用）
       currentFolders.forEach(folder => {
         const card = document.createElement("div");
         card.className = "pdf-page-item-card";
@@ -369,19 +391,23 @@
         setupItemDragEvents(card, { type: "folder", id: folder.id });
         setupFolderDropEvents(card, folder.id);
 
-        const icon = document.createElement("span");
-        icon.style.fontSize = "32px";
-        icon.textContent = "📁";
-        icon.style.pointerEvents = "none";
+        const iconDiv = document.createElement("div");
+        iconDiv.className = "file-icon";
+        iconDiv.innerHTML = getFolderIconHtml();
+        iconDiv.style.pointerEvents = "none";
 
         const nameSpan = document.createElement("span");
         nameSpan.className = "file-name";
         nameSpan.textContent = folder.name;
         nameSpan.style.pointerEvents = "none";
 
+        const ctrlArea = document.createElement("div");
+        ctrlArea.className = "ctrl-area";
+
         const delBtn = document.createElement("button");
-        delBtn.textContent = "削除";
+        delBtn.textContent = "✕";
         delBtn.className = "del-btn";
+        delBtn.title = "削除";
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           deleteFolder(folder.id);
@@ -398,7 +424,8 @@
           openFolder(folder.id);
         });
 
-        card.append(icon, nameSpan, delBtn);
+        ctrlArea.appendChild(delBtn);
+        card.append(iconDiv, nameSpan, ctrlArea);
         zipDropZone.appendChild(card);
       });
 
@@ -431,6 +458,7 @@
         const delBtn = document.createElement("button");
         delBtn.textContent = "✕";
         delBtn.className = "del-btn";
+        delBtn.title = "削除";
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           removeFileById(item.id);
@@ -502,18 +530,23 @@
         renderZipFiles();
       });
 
-      const icon = document.createElement("span");
-      icon.className = "file-icon";
-      icon.style.pointerEvents = "none";
-      icon.textContent = "📁";
-      icon.style.marginRight = "6px";
+      // フォルダ行のアイコン（file.png：枠線なし）
+      const iconImg = document.createElement("img");
+      iconImg.src = "images/file.png";
+      iconImg.width = 16;
+      iconImg.height = 16;
+      iconImg.style.marginRight = "6px";
+      iconImg.style.objectFit = "contain";
+      iconImg.style.background = "transparent";
+      iconImg.style.border = "none";
+      iconImg.style.pointerEvents = "none";
 
       const name = document.createElement("span");
       name.className = "file-name";
       name.style.pointerEvents = "none";
       name.textContent = folder.name;
 
-      leftContainer.append(toggleBtn, icon, name);
+      leftContainer.append(toggleBtn, iconImg, name);
 
       // 削除ボタン（赤字・一番右側配置）
       const delBtn = document.createElement("button");
