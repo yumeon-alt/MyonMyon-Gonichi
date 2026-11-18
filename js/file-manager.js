@@ -28,8 +28,7 @@
     );
   }
 
- // ファイルの種類に応じた画像アイコンのHTMLを返す関数（大きくして真ん中に配置）
-// ファイルの種類に応じた画像アイコンのHTMLを返す関数
+  // ファイルの種類に応じた画像アイコンのHTMLを返す関数
   function getFileIconHtml(file) {
     const ext = file.name.split(".").pop().toLowerCase();
     
@@ -193,10 +192,14 @@
       renderFileList();
     });
 
+    // アイコン表示モードのときだけ画像を表示し、リスト表示のときは非表示にする
     const icon = document.createElement("span");
     icon.className = "file-icon";
-    // 画像タグとして挿入するため innerHTML を使用
-    icon.innerHTML = getFileIconHtml(item.file);
+    if (currentView === "icons") {
+      icon.innerHTML = getFileIconHtml(item.file);
+    } else {
+      icon.innerHTML = "";
+    }
 
     const name = document.createElement("span");
     name.className = "file-name";
