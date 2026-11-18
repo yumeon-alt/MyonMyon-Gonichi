@@ -212,9 +212,21 @@
       const empty = document.createElement("div");
       empty.className = "drop-empty";
       empty.innerHTML = `
-        <div class="drop-icon">⇩</div>
-        <p>ファイルをここにドラッグ＆ドロップ、またはクリックして追加できます。</p>
-      `;
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24">
+          <!-- 太い円枠 -->
+          <circle cx="12" cy="12" r="9.5" fill="none" stroke="#8f959e" stroke-width="2.3" />
+          <!-- 角の丸い太め矢印 -->
+          <path d="M12 7.5v8.5 M8.5 12.5L12 16l3.5-3.5" 
+                fill="none" 
+                stroke="#8f959e" 
+                stroke-width="2.5" 
+                stroke-linecap="round" 
+                stroke-linejoin="round" />
+        </svg>
+      </div>
+      <p>あなたはファイルをここにドラッグ＆ドロップして追加できます。</p>
+    `;
       pdfDropZone.appendChild(empty);
       return;
     }

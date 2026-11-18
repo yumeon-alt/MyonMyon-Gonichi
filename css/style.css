@@ -182,29 +182,33 @@ body {
   gap: 10px;
 }
 
-/* 空のドロップ枠（全機能で完全統一） */
+/* ===== 空のドロップ枠 ===== */
 .drop-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 180px;
+  min-height: 190px;
   padding: 30px 20px;
   text-align: center;
-  color: #666;
+  color: #555;
   box-sizing: border-box;
 }
 
+/* Moodle風 太め円枠＋太め灰色矢印アイコン */
 .drop-empty .drop-icon {
-  font-size: 2rem;
-  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 12px;
 }
 
-.drop-empty p {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #666;
+.drop-empty .drop-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 /* アイコン表示 */
