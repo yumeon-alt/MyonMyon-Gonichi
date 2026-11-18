@@ -305,6 +305,7 @@ async function loadUserHistories(uid) {
   }
 }
 
+// 履歴リスト描画（変換先拡張子に応じたアイコン切り替え版）
 function renderHistoryList(histories) {
   const listEl = $("history-list");
   if (!listEl) return;
@@ -313,6 +314,42 @@ function renderHistoryList(histories) {
   if (histories.length === 0) {
     listEl.innerHTML = "<li style='color: #888; padding: 6px 8px;'>履歴はまだありません。</li>";
     return;
+  }
+
+  // 履歴のファイル形式やアクションから適切なアイコン画像を判定する関数
+  function getHistoryIconHtml(item) {
+    let imgPath = "images/?.png";
+    let label = "操作";
+
+    if (item.actionType === "zip-compression") {
+      imgPath = "images/zip.png";
+      label = "ZIP圧縮";
+    } else if (item.actionType === "pdf-editor") {
+      imgPath = "images/pdf.png";
+      label = "PDF編集";
+    } else if (item.actionType === "image-convert") {
+      label = "変換";
+      // 変換先のフォーマット（details.format または details.fileName から拡張子を抽出）
+      const format = item.details?.format?.toLowerCase() || 
+                     (item.details?.fileName ? item.details.fileName.split(".").pop().toLowerCase() : "");
+
+      if (format === "png") {
+        imgPath = "images/image.png";
+      } else if (["jpg", "jpeg"].includes(format)) {
+        imgPath = "images/jpg.png";
+      } else if (format === "pdf") {
+        imgPath = "images/pdf.png";
+      } else if (["zip", "rar", "7z"].includes(format)) {
+        imgPath = "images/zip.png";
+      } else {
+        imgPath = "images/image.png";
+      }
+    }
+
+    return {
+      html: `<img src="${imgPath}" width="20" height="20" style="vertical-align: middle; margin-right: 4px;" alt="${label}">`,
+      label: label
+    };
   }
 
   histories.forEach(item => {
@@ -324,18 +361,20 @@ function renderHistoryList(histories) {
     li.style.alignItems = "center";
     
     const dateStr = item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : "同期中...";
-    const typeLabel = item.actionType === "image-convert" ? "🖼️ 変換" : item.actionType === "pdf-editor" ? "📕 PDF編集" : "📦 ZIP圧縮";
     
+    // 拡張子に応じたアイコン情報を取得
+    const iconInfo = getHistoryIconHtml(item);
+
     const textSpan = document.createElement("span");
     let rightAreaHtml = "";
+    
     if (item.details && item.details.gigafileUrl) {
-      textSpan.textContent = `[${dateStr}] ${typeLabel}: ${item.details.fileName || "ファイル"} (ギガファイル便共有)`;
+      textSpan.innerHTML = `[${dateStr}] ${iconInfo.html}${iconInfo.label}: ${item.details.fileName || "ファイル"} (ギガファイル便共有)`;
       rightAreaHtml = `<a href="${item.details.gigafileUrl}" target="_blank" style="padding: 4px 10px; background: #2ea44f; color: #fff; text-decoration: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">📤 ギガファイル便を開く</a>`;
     } else {
-      textSpan.textContent = `[${dateStr}] ${typeLabel}: ${JSON.stringify(item.details)}`;
+      textSpan.innerHTML = `[${dateStr}] ${iconInfo.html}${iconInfo.label}: ${JSON.stringify(item.details)}`;
     }
 
-    // ★ ドロップ枠内のファイル削除ボタンと統一したデザイン（赤テキスト・ホバー下線）
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "削除";
     deleteBtn.className = "delete-file";
@@ -636,7 +675,6 @@ if ($("convertBtn")) {
       }
     }
 
-    // 変換成功時に画面上のファイル一覧を自動クリアするイベントを送信
     if (successfulFiles.length > 0) {
       window.dispatchEvent(
         new CustomEvent("file-studio-clear-converted-files", {
