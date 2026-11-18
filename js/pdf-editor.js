@@ -528,8 +528,7 @@
     });
   }
 
-  // 「ダウンロード」ボタン押下時（保存実行後に一覧クリア）
-  if (pdfDownloadBtn) {
+if (pdfDownloadBtn) {
     pdfDownloadBtn.addEventListener("click", () => {
       if (!generatedPdfBlob) {
         alert("ダウンロードするPDFデータがありません。");
@@ -544,7 +543,11 @@
 
       window.ImageConverter.download(generatedPdfBlob, outputFilename);
 
-      // 保存完了後にデータをクリアして初期状態に戻す
+      // 【追加】PDF編集の履歴を保存
+      if (typeof window.saveUserHistory === "function") {
+        window.saveUserHistory("pdf-editor", { fileName: outputFilename, pageCount: pdfPages.length });
+      }
+
       pdfPages = [];
       hidePdfResult();
       renderPdfPages();

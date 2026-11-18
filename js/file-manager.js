@@ -457,7 +457,7 @@
   if (zipBtn) {
     zipBtn.addEventListener("click", async () => {
       if (!zipSelectedFiles || zipSelectedFiles.length === 0) {
-        alert("ZIPにまとめるファイルが選択されていません。");
+        alert("ZIPにまとめるファイルが選択されていません。ファイルを追加してください。");
         hideZipResult();
         return;
       }
@@ -471,7 +471,16 @@
 
       try {
         generatedZipBlob = await zip.generateAsync({ type: "blob" });
+
+        const zipFileName = zipName && zipName.value.trim() !== "" ? zipName.value.trim() : "archive.zip";
+
+        // ZIP圧縮履歴の保存
+        if (typeof window.saveUserHistory === "function") {
+          window.saveUserHistory("zip-compression", { fileName: zipFileName, fileCount: zipSelectedFiles.length });
+        }
+
         showZipResult();
+
         zipSelectedFiles = [];
         renderZipFileList();
       } catch (error) {
