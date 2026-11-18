@@ -88,21 +88,13 @@
       <button id="convertBtn" class="main-btn" disabled>変換する</button>
       <div id="status"></div>
 
-      <!-- ファイル変換完了後に表示される外部ストレージ連携エリア -->
-      <div id="convertResultArea" class="result-area hidden" style="margin-top: 15px; display: none; flex-direction: column; gap: 8px; background: #f6f8fa; padding: 12px; border-radius: 8px; border: 1px solid #d0d7de;">
-        <span class="result-area-msg" style="font-weight: bold; color: #16845b; font-size: 0.9rem;">✨ ファイルを変換しました！</span>
-        
-        <div style="border-top: 1px dashed #ccc; padding-top: 8px; display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <button id="openGigafileBtn-convert" style="padding: 4px 8px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">ギガ便</button>
-            <input type="text" id="gigafileUrl-convert" placeholder="ギガファイル便URL" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
-            <button id="saveGigafileBtn-convert" style="padding: 4px 8px; background: #6559bb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
-          </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <button id="openDropboxBtn-convert" style="padding: 4px 8px; background: #fff; border: 1px solid #0061fe; color: #0061fe; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Dropbox</button>
-            <input type="text" id="dropboxUrl-convert" placeholder="Dropbox共有リンク" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
-            <button id="saveDropboxBtn-convert" style="padding: 4px 8px; background: #0061fe; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
-          </div>
+      <!-- ギガファイル便連携エリア（ファイル変換） -->
+      <div style="margin-top: 15px; background: #f6f8fa; padding: 12px; border-radius: 8px; border: 1px solid #d0d7de;">
+        <p style="margin: 0 0 8px 0; font-size: 0.85rem; font-weight: bold; color: #333;">📤 ギガファイル便のリンクを残す場合</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button id="openGigafileBtn-convert" style="padding: 6px 12px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">ギガファイル便を開く</button>
+          <input type="text" id="gigafileUrl-convert" placeholder="発行されたURLをここに貼り付け" style="flex: 1; min-width: 180px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem;">
+          <button id="saveGigafileBtn-convert" style="padding: 6px 12px; background: #6559bb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">履歴にリンク保存</button>
         </div>
       </div>
     </section>
@@ -142,16 +134,13 @@
         <span id="pdfSuccessMsg" class="result-area-msg">📄 編集したPDFを作成しました！</span>
         <button id="pdfDownloadBtn" class="result-area-btn">ダウンロード</button>
 
-        <div style="margin-top: 12px; border-top: 1px dashed #ccc; padding-top: 10px; width: 100%; display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <button id="openGigafileBtn-pdf" style="padding: 4px 8px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">ギガ便</button>
-            <input type="text" id="gigafileUrl-pdf" placeholder="ギガファイル便URL" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
-            <button id="saveGigafileBtn-pdf" style="padding: 4px 8px; background: #6559bb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
-          </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <button id="openDropboxBtn-pdf" style="padding: 4px 8px; background: #fff; border: 1px solid #0061fe; color: #0061fe; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Dropbox</button>
-            <input type="text" id="dropboxUrl-pdf" placeholder="Dropbox共有リンク" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
-            <button id="saveDropboxBtn-pdf" style="padding: 4px 8px; background: #0061fe; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
+        <!-- ギガファイル便連携エリア（PDF編集） -->
+        <div style="margin-top: 12px; border-top: 1px dashed #ccc; padding-top: 10px; width: 100%;">
+          <p style="margin: 0 0 6px 0; font-size: 0.8rem; font-weight: bold; color: #333;">📤 ギガファイル便のリンクを残す場合</p>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button id="openGigafileBtn-pdf" style="padding: 5px 10px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">ギガファイル便を開く</button>
+            <input type="text" id="gigafileUrl-pdf" placeholder="ギガファイル便URL" style="flex: 1; padding: 5px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.8rem;">
+            <button id="saveGigafileBtn-pdf" style="padding: 5px 10px; background: #6559bb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">履歴に保存</button>
           </div>
         </div>
       </div>
@@ -189,16 +178,13 @@
         <span id="zipSuccessMsg" class="result-area-msg">📦 圧縮できました！</span>
         <button id="zipDownloadBtn" class="result-area-btn">ダウンロード</button>
 
-        <div style="margin-top: 12px; border-top: 1px dashed #ccc; padding-top: 10px; width: 100%; display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <button id="openGigafileBtn-zip" style="padding: 4px 8px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">ギガ便</button>
-            <input type="text" id="gigafileUrl-zip" placeholder="ギガファイル便URL" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
-            <button id="saveGigafileBtn-zip" style="padding: 4px 8px; background: #6559bb; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
-          </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-            <button id="openDropboxBtn-zip" style="padding: 4px 8px; background: #fff; border: 1px solid #0061fe; color: #0061fe; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">Dropbox</button>
-            <input type="text" id="dropboxUrl-zip" placeholder="Dropbox共有リンク" style="flex: 1; padding: 4px 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem;">
-            <button id="saveDropboxBtn-zip" style="padding: 4px 8px; background: #0061fe; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">保存</button>
+        <!-- ギガファイル便連携エリア（ZIP圧縮） -->
+        <div style="margin-top: 12px; border-top: 1px dashed #ccc; padding-top: 10px; width: 100%;">
+          <p style="margin: 0 0 6px 0; font-size: 0.8rem; font-weight: bold; color: #333;">📤 ギガファイル便でPCへ送る場合</p>
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button id="openGigafileBtn-zip" style="padding: 5px 10px; background: #fff; border: 1px solid #6559bb; color: #6559bb; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">ギガファイル便を開く</button>
+            <input type="text" id="gigafileUrl-zip" placeholder="ギガファイル便URL" style="flex: 1; padding: 5px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.8rem;">
+            <button id="saveGigafileBtn-zip" style="padding: 5px 10px; background: #6559bb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">履歴に保存</button>
           </div>
         </div>
       </div>

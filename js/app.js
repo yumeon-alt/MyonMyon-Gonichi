@@ -72,7 +72,7 @@ const checkInterval = setInterval(() => {
   if (window.firebaseAuth && window.firebaseDb) {
     clearInterval(checkInterval);
     initAuthSystem();
-    initStorageHandlers();
+    initGigafileHandlers();
   }
 }, 100);
 
@@ -196,18 +196,17 @@ function initAuthSystem() {
 }
 
 // ==========================================
-// 外部ストレージ（ギガファイル便・Dropbox）連携処理
+// ギガファイル便のリンク保存＆オープン処理
 // ==========================================
-function initStorageHandlers() {
-  const setupHandler = (type, serviceName, urlInputId, openBtnId, saveBtnId, getFileNameFn) => {
-    const openBtn = $(openBtnId);
-    const saveBtn = $(saveBtnId);
-    const urlInput = $(urlInputId);
+function initGigafileHandlers() {
+  const setupHandler = (type, getFileNameFn) => {
+    const openBtn = $(`openGigafileBtn-${type}`);
+    const saveBtn = $(`saveGigafileBtn-${type}`);
+    const urlInput = $(`gigafileUrl-${type}`);
 
     if (openBtn) {
       openBtn.addEventListener('click', () => {
-        const targetUrl = serviceName === 'gigafile' ? 'https://gigafile.nu/' : 'https://www.dropbox.com/';
-        window.open(targetUrl, '_blank');
+        window.open('https://gigafile.nu/', '_blank');
       });
     }
 
@@ -215,7 +214,7 @@ function initStorageHandlers() {
       saveBtn.addEventListener('click', async () => {
         const url = urlInput.value.trim();
         if (!url) {
-          alert('共有リンク（URL）を入力してください。');
+          alert('ギガファイル便のURLを入力してください。');
           return;
         }
 
@@ -228,45 +227,40 @@ function initStorageHandlers() {
 
         const fileName = getFileNameFn();
         const actionType = type === 'convert' ? 'image-convert' : type === 'pdf' ? 'pdf-editor' : 'zip-compression';
-        const serviceLabel = serviceName === 'gigafile' ? 'ギガファイル便' : 'Dropbox';
 
         try {
           const { collection, addDoc, serverTimestamp } = window.firebaseFirestoreFns;
           await addDoc(collection(db, "histories"), {
             uid: auth.currentUser.uid,
             actionType: actionType,
-            details: { fileName: fileName, externalUrl: url, serviceName: serviceLabel },
+            details: { fileName: fileName, gigafileUrl: url },
             createdAt: serverTimestamp()
           });
 
-          alert(`${serviceLabel}のリンクを履歴に保存しました！PCからログインして確認できます。`);
+          alert('ギガファイル便のリンクを履歴に保存しました！PCからログインして確認できます。');
           urlInput.value = '';
           loadUserHistories(auth.currentUser.uid);
         } catch (err) {
-          console.error("ストレージリンクの保存エラー:", err);
+          console.error("ギガファイル便リンクの保存エラー:", err);
           alert('保存に失敗しました。');
         }
       });
     }
   };
 
-  const getFileName = (type) => {
-    if (type === 'convert') {
-      const fnElem = $('fileName');
-      return fnElem && fnElem.textContent ? fnElem.textContent : "変換ファイル";
-    } else if (type === 'pdf') {
-      const outName = $('pdfOutputName');
-      return outName ? outName.value : "merged.pdf";
-    } else if (type === 'zip') {
-      const zName = $('zipName');
-      return zName ? zName.value : "archive.zip";
-    }
-    return "ファイル";
-  };
+  setupHandler('convert', () => {
+    const fnElem = $('fileName');
+    return fnElem && fnElem.textContent ? fnElem.textContent : "変換ファイル";
+  });
 
-  ['convert', 'pdf', 'zip'].forEach(type => {
-    setupHandler(type, 'gigafile', `gigafileUrl-${type}`, `openGigafileBtn-${type}`, `saveGigafileBtn-${type}`, () => getFileName(type));
-    setupHandler(type, 'dropbox', `dropboxUrl-${type}`, `openDropboxBtn-${type}`, `saveDropboxBtn-${type}`, () => getFileName(type));
+  setupHandler('pdf', () => {
+    const outName = $('pdfOutputName');
+    return outName ? outName.value : "merged.pdf";
+  });
+
+  setupHandler('zip', () => {
+    const zName = $('zipName');
+    return zName ? zName.value : "archive.zip";
   });
 }
 
@@ -340,12 +334,11 @@ function renderHistoryList(histories) {
     
     const textSpan = document.createElement("span");
     
+    // 詳細データの中にギガファイル便のURLがあるかどうかで表示を切り替え
     let rightAreaHtml = "";
-    if (item.details && item.details.externalUrl) {
-      const sName = item.details.serviceName || "外部ストレージ";
-      const btnBg = sName === 'Dropbox' ? '#0061fe' : '#2ea44f';
-      textSpan.textContent = `[${dateStr}] ${typeLabel}: ${item.details.fileName || "ファイル"} (${sName}共有)`;
-      rightAreaHtml = `<a href="${item.details.externalUrl}" target="_blank" style="padding: 4px 10px; background: ${btnBg}; color: #fff; text-decoration: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">📤 ${sName}を開く</a>`;
+    if (item.details && item.details.gigafileUrl) {
+      textSpan.textContent = `[${dateStr}] ${typeLabel}: ${item.details.fileName || "ファイル"} (ギガファイル便共有)`;
+      rightAreaHtml = `<a href="${item.details.gigafileUrl}" target="_blank" style="padding: 4px 10px; background: #2ea44f; color: #fff; text-decoration: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">📤 ギガファイル便を開く</a>`;
     } else {
       textSpan.textContent = `[${dateStr}] ${typeLabel}: ${JSON.stringify(item.details)}`;
     }
@@ -629,6 +622,10 @@ if ($("convertBtn")) {
         success++;
         successfulFiles.push(file);
         
+        if (typeof window.saveUserHistory === "function") {
+          await window.saveUserHistory("image-convert", { fileName: outputName, format: selectedFormat });
+        }
+
         await new Promise(resolve => setTimeout(resolve, 300));
 
       } catch (error) {
