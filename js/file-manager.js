@@ -32,7 +32,7 @@
   function getFileIconHtml(file) {
     const ext = file.name.split(".").pop().toLowerCase();
     
-    let imgPath = "images/hatena.png"; // デフォルト（HEICやその他）
+    let imgPath = "images/hatena.png"; // デフォルト
     let label = "ファイル";
 
     if (["png"].includes(ext)) {
@@ -63,7 +63,6 @@
     });
   }
 
-  // ★ すべてクリアボタンのイベントハンドラ
   if (clearFilesBtn) {
     clearFilesBtn.addEventListener("click", () => {
       managedFiles = [];
@@ -169,7 +168,7 @@
         <span>更新日時</span>
         <span>サイズ</span>
         <span>種類</span>
-        <span>操作</span>
+        <span style="text-align: right; margin-right: 12px;">操作</span>
       `;
       fileList.appendChild(header);
     }
@@ -184,6 +183,13 @@
     row.className = "file-item";
     if (item.selected) row.classList.add("selected");
 
+    // リスト表示のときにフレックスボックスで両端に要素を配置できるようにスタイル調整
+    if (currentView === "details") {
+      row.style.display = "flex";
+      row.style.alignItems = "center";
+      row.style.justifyContent = "space-between";
+    }
+
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = item.selected;
@@ -192,7 +198,6 @@
       renderFileList();
     });
 
-    // アイコン表示モードのときだけ画像を表示し、リスト表示のときは非表示にする
     const icon = document.createElement("span");
     icon.className = "file-icon";
     if (currentView === "icons") {
@@ -215,10 +220,27 @@
       `;
     }
 
+    // 削除ボタン（枠内の一番右側に寄せる設定）
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-file";
     deleteButton.textContent = "削除";
     deleteButton.title = "ファイルを削除";
+    deleteButton.style.border = "none";
+    deleteButton.style.background = "transparent";
+    deleteButton.style.color = "#d9534f";
+    deleteButton.style.fontSize = "0.85rem";
+    deleteButton.style.cursor = "pointer";
+    deleteButton.style.padding = "0";
+    deleteButton.style.marginLeft = "auto";
+    deleteButton.style.marginRight = "8px"; // 右端から少しだけ余白を開ける
+
+    deleteButton.addEventListener("mouseenter", () => {
+      deleteButton.style.textDecoration = "underline";
+    });
+    deleteButton.addEventListener("mouseleave", () => {
+      deleteButton.style.textDecoration = "none";
+    });
+
     deleteButton.addEventListener("click", event => {
       event.stopPropagation();
       deleteFile(item.id);

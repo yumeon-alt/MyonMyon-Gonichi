@@ -463,6 +463,9 @@
 
       const row = document.createElement("div");
       row.className = "file-item folder-item";
+      row.style.display = "flex";
+      row.style.alignItems = "center";
+      row.style.justifyContent = "space-between";
       row.style.paddingLeft = (10 + depth * 20) + "px";
       if (selectedItem && selectedItem.type === "folder" && selectedItem.id === folder.id) {
         row.style.background = "#e4efff";
@@ -471,6 +474,12 @@
       row.draggable = true;
       setupItemDragEvents(row, { type: "folder", id: folder.id });
       setupFolderDropEvents(row, folder.id);
+
+      const leftContainer = document.createElement("div");
+      leftContainer.style.display = "flex";
+      leftContainer.style.alignItems = "center";
+      leftContainer.style.flexGrow = "1";
+      leftContainer.style.overflow = "hidden";
 
       // Mac風 ▶ トグル矢印
       const toggleBtn = document.createElement("span");
@@ -497,15 +506,34 @@
       icon.className = "file-icon";
       icon.style.pointerEvents = "none";
       icon.textContent = "📁";
+      icon.style.marginRight = "6px";
 
       const name = document.createElement("span");
       name.className = "file-name";
       name.style.pointerEvents = "none";
       name.textContent = folder.name;
 
+      leftContainer.append(toggleBtn, icon, name);
+
+      // 削除ボタン（赤字・一番右側配置）
       const delBtn = document.createElement("button");
       delBtn.className = "delete-file";
       delBtn.textContent = "削除";
+      delBtn.style.border = "none";
+      delBtn.style.background = "transparent";
+      delBtn.style.color = "#d9534f";
+      delBtn.style.fontSize = "0.85rem";
+      delBtn.style.cursor = "pointer";
+      delBtn.style.padding = "4px 8px";
+      delBtn.style.flexShrink = "0";
+
+      delBtn.addEventListener("mouseenter", () => {
+        delBtn.style.textDecoration = "underline";
+      });
+      delBtn.addEventListener("mouseleave", () => {
+        delBtn.style.textDecoration = "none";
+      });
+
       delBtn.addEventListener("click", e => {
         e.stopPropagation();
         deleteFolder(folder.id);
@@ -522,7 +550,7 @@
         openFolder(folder.id);
       });
 
-      row.append(toggleBtn, icon, name, delBtn);
+      row.append(leftContainer, delBtn);
       zipDropZone.appendChild(row);
 
       // フォルダが展開されている場合、子要素を再帰描画
@@ -534,6 +562,9 @@
     childFiles.forEach(item => {
       const row = document.createElement("div");
       row.className = "file-item";
+      row.style.display = "flex";
+      row.style.alignItems = "center";
+      row.style.justifyContent = "space-between";
       row.style.paddingLeft = (28 + depth * 20) + "px"; // 矢印分のオフセット調整
       if (selectedItem && selectedItem.type === "file" && selectedItem.id === item.id) {
         row.style.background = "#e4efff";
@@ -541,6 +572,12 @@
 
       row.draggable = true;
       setupItemDragEvents(row, { type: "file", id: item.id });
+
+      const leftContainer = document.createElement("div");
+      leftContainer.style.display = "flex";
+      leftContainer.style.alignItems = "center";
+      leftContainer.style.flexGrow = "1";
+      leftContainer.style.overflow = "hidden";
 
       // リスト表示（textモード）ではアイコンを表示しないように空にする
       const icon = document.createElement("span");
@@ -552,14 +589,35 @@
       name.className = "file-name";
       name.textContent = item.displayName;
       name.style.pointerEvents = "none";
+      name.style.marginRight = "10px";
 
       const info = document.createElement("span");
       info.className = "file-info";
+      info.style.color = "#666";
+      info.style.fontSize = "0.85rem";
       info.innerHTML = `<span>${formatFileSize(item.file.size)}</span>`;
 
+      leftContainer.append(icon, name, info);
+
+      // 削除ボタン（赤字・一番右側配置）
       const delBtn = document.createElement("button");
       delBtn.className = "delete-file";
       delBtn.textContent = "削除";
+      delBtn.style.border = "none";
+      delBtn.style.background = "transparent";
+      delBtn.style.color = "#d9534f";
+      delBtn.style.fontSize = "0.85rem";
+      delBtn.style.cursor = "pointer";
+      delBtn.style.padding = "4px 8px";
+      delBtn.style.flexShrink = "0";
+
+      delBtn.addEventListener("mouseenter", () => {
+        delBtn.style.textDecoration = "underline";
+      });
+      delBtn.addEventListener("mouseleave", () => {
+        delBtn.style.textDecoration = "none";
+      });
+
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         removeFileById(item.id);
@@ -571,7 +629,7 @@
         renderZipFiles();
       });
 
-      row.append(icon, name, info, delBtn);
+      row.append(leftContainer, delBtn);
       zipDropZone.appendChild(row);
     });
   }
