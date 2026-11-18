@@ -44,24 +44,35 @@ window.ImageConverter = (function () {
     });
   }
 
-  // HEIC / HEIF の変換
+  // HEIC / HEIF の変換（すでに読み込み可能な場合のフォールバック処理を追加）
   async function convertHeicToCanvas(file) {
-    if (!window.heic2any) {
-      throw new Error("HEIC変換ライブラリがロードされていません。");
+    let img;
+    try {
+      if (!window.heic2any) {
+        throw new Error("HEIC変換ライブラリがロードされていません。");
+      }
+      const conversionResult = await heic2any({
+        blob: file,
+        toType: "image/png"
+      });
+      const blob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
+      const url = URL.createObjectURL(blob);
+      img = await loadImage(url);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      // ERR_USER Image is already browser readable 等のエラーが起きた場合は直接読み込みを試みる
+      const dataUrl = await readFileAsDataURL(file);
+      img = await loadImage(dataUrl);
     }
-    const conversionResult = await heic2any({
-      blob: file,
-      toType: "image/png"
-    });
-    const blob = Array.isArray(conversionResult) ? conversionResult[0] : conversionResult;
-    const url = URL.createObjectURL(blob);
-    const img = await loadImage(url);
-    URL.revokeObjectURL(url);
 
     const canvas = document.createElement("canvas");
     canvas.width = img.naturalWidth || img.width;
     canvas.height = img.naturalHeight || img.height;
     const ctx = canvas.getContext("2d");
+    
+    // 背景を白で塗る
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0);
     return canvas;
   }
