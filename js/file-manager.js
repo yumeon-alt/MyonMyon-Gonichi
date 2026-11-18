@@ -8,24 +8,11 @@
   const downloadFilesBtn = document.getElementById("downloadFilesBtn");
   const filePath = document.getElementById("filePath");
 
-  // ZIP圧縮セクション用の要素
-  const zipInput = document.getElementById("zipInput");
-  const zipDropZone = document.getElementById("zipDropZone");
-  const zipAddBtn = document.getElementById("zipAddBtn");
-  const zipName = document.getElementById("zipName");
-  const zipBtn = document.getElementById("zipBtn");
-  const zipClearBtn = document.getElementById("zipClearBtn");
-  const zipResultArea = document.getElementById("zipResultArea");
-  const zipDownloadBtn = document.getElementById("zipDownloadBtn");
-
   let managedFiles = [];
   let folders = [];
   let currentFolder = null;
   let currentView = "icons";
   let nextId = 1;
-
-  let zipSelectedFiles = [];
-  let generatedZipBlob = null;
 
   function formatFileSize(size) {
     if (size < 1024) return size + " B";
@@ -327,177 +314,6 @@
     notifyApp();
   }
 
-  function hideZipResult() {
-    generatedZipBlob = null;
-    if (zipResultArea) {
-      zipResultArea.classList.add("hidden");
-      zipResultArea.style.display = "none";
-    }
-  }
-
-  function showZipResult() {
-    if (zipResultArea) {
-      zipResultArea.classList.remove("hidden");
-      zipResultArea.style.display = "flex";
-    }
-  }
-
-  if (zipDropZone && zipInput) {
-    zipDropZone.addEventListener("click", (e) => {
-      if (e.target.closest("button") || e.target.closest("input") || e.target.closest(".file-item")) return;
-      zipInput.click();
-    });
-
-    if (zipAddBtn) {
-      zipAddBtn.addEventListener("click", () => zipInput.click());
-    }
-
-    zipInput.addEventListener("change", (e) => {
-      const files = Array.from(e.target.files);
-      if (files.length > 0) {
-        zipSelectedFiles = zipSelectedFiles.concat(files);
-        hideZipResult();
-      }
-      zipInput.value = "";
-      renderZipFileList();
-    });
-
-    ["dragenter", "dragover"].forEach(eventName => {
-      zipDropZone.addEventListener(eventName, event => {
-        event.preventDefault();
-        event.stopPropagation();
-        zipDropZone.classList.add("drag-over");
-      });
-    });
-
-    ["dragleave", "drop"].forEach(eventName => {
-      zipDropZone.addEventListener(eventName, event => {
-        event.preventDefault();
-        event.stopPropagation();
-        zipDropZone.classList.remove("drag-over");
-      });
-    });
-
-    zipDropZone.addEventListener("drop", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      zipDropZone.classList.remove("drag-over");
-      const files = Array.from(event.dataTransfer.files);
-      if (files.length > 0) {
-        zipSelectedFiles = zipSelectedFiles.concat(files);
-        hideZipResult();
-        renderZipFileList();
-      }
-    });
-  }
-
-  if (zipClearBtn) {
-    zipClearBtn.addEventListener("click", () => {
-      zipSelectedFiles = [];
-      hideZipResult();
-      renderZipFileList();
-    });
-  }
-
-  function renderZipFileList() {
-    if (!zipDropZone) return;
-
-    const existingInput = zipDropZone.querySelector("#zipInput");
-    zipDropZone.innerHTML = "";
-    if (existingInput) zipDropZone.appendChild(existingInput);
-
-    if (zipSelectedFiles.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "drop-empty";
-      empty.innerHTML = `
-        <div class="drop-icon">
-          <svg viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="9.5" fill="none" stroke="#8f959e" stroke-width="2.3" />
-            <path d="M12 7.5v8.5 M8.5 12.5L12 16l3.5-3.5" fill="none" stroke="#8f959e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <p>あなたはファイルをここにドラッグ＆ドロップして追加できます。</p>
-      `;
-      zipDropZone.appendChild(empty);
-      return;
-    }
-
-    zipSelectedFiles.forEach((file, index) => {
-      const row = document.createElement("div");
-      row.className = "file-item";
-
-      const icon = document.createElement("span");
-      icon.className = "file-icon";
-      icon.textContent = getFileIcon(file);
-
-      const name = document.createElement("span");
-      name.className = "file-name";
-      name.textContent = file.name;
-
-      const info = document.createElement("span");
-      info.className = "file-info";
-      info.innerHTML = `<span>${formatFileSize(file.size)}</span>`;
-
-      const deleteButton = document.createElement("button");
-      deleteButton.className = "delete-file";
-      deleteButton.textContent = "削除";
-      deleteButton.title = "ファイルを削除";
-      deleteButton.addEventListener("click", (event) => {
-        event.stopPropagation();
-        zipSelectedFiles.splice(index, 1);
-        hideZipResult();
-        renderZipFileList();
-      });
-
-      row.append(icon, name, info, deleteButton);
-      zipDropZone.appendChild(row);
-    });
-  }
-
-  if (zipBtn) {
-    zipBtn.addEventListener("click", async () => {
-      if (!zipSelectedFiles || zipSelectedFiles.length === 0) {
-        alert("ZIPにまとめるファイルが選択されていません。ファイルを追加してください。");
-        hideZipResult();
-        return;
-      }
-      if (!window.JSZip) {
-        alert("ZIPライブラリ（JSZip）が読み込まれていません。");
-        return;
-      }
-
-      const zip = new JSZip();
-      zipSelectedFiles.forEach(file => zip.file(file.name, file));
-
-      try {
-        generatedZipBlob = await zip.generateAsync({ type: "blob" });
-
-        const zipFileName = zipName && zipName.value.trim() !== "" ? zipName.value.trim() : "archive.zip";
-
-        if (typeof window.saveUserHistory === "function") {
-          window.saveUserHistory("zip-compression", { fileName: zipFileName, fileCount: zipSelectedFiles.length });
-        }
-
-        showZipResult();
-
-        zipSelectedFiles = [];
-        renderZipFileList();
-      } catch (error) {
-        console.error("ZIP作成エラー:", error);
-        alert("ZIPの作成中にエラーが発生しました。");
-        hideZipResult();
-      }
-    });
-  }
-
-  if (zipDownloadBtn) {
-    zipDownloadBtn.addEventListener("click", () => {
-      if (!generatedZipBlob) return;
-      const filename = zipName && zipName.value.trim() !== "" ? zipName.value.trim() : "archive.zip";
-      downloadBlob(generatedZipBlob, filename);
-    });
-  }
-
   if (downloadFilesBtn) {
     downloadFilesBtn.addEventListener("click", async () => {
       const selected = managedFiles.filter(item => item.selected);
@@ -551,7 +367,7 @@
     });
   });
 
-  // ★ ファイル変換成功時に選択されていたファイルを自動クリアするイベントリスナー
+  // ファイル変換成功時に選択されていたファイルを自動クリアするイベントリスナー
   window.addEventListener("file-studio-clear-converted-files", event => {
     if (event.detail && event.detail.convertedFiles) {
       const convertedFiles = event.detail.convertedFiles;
@@ -562,6 +378,4 @@
   });
 
   renderFileList();
-  renderZipFileList();
-  hideZipResult();
 })();
