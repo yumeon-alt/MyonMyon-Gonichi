@@ -174,14 +174,6 @@ body {
   box-sizing: border-box;
 }
 
-/* ファイルが存在してアイコン表示モードの時のみ Grid を適用 */
-.file-list.has-files.icon-view {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  align-content: start;
-  gap: 10px;
-}
-
 /* ===== 空のドロップ枠 ===== */
 .drop-empty {
   display: flex;
@@ -196,7 +188,6 @@ body {
   box-sizing: border-box;
 }
 
-/* Moodle風 太め円枠＋太め灰色矢印アイコン */
 .drop-empty .drop-icon {
   display: inline-flex;
   align-items: center;
@@ -211,70 +202,73 @@ body {
   height: 100%;
 }
 
-/* アイコン表示 */
-.file-list.icon-view {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  align-content: start;
+/* ===== Moodle風 カード表示（スクショ完全一致版） ===== */
+.file-list.has-files.icon-view {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  padding: 12px !important;
 }
 
-.file-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-  padding: 9px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.file-item:hover {
-  background: #f0f3f8;
-}
-
-.file-item.selected {
-  background: #e4edfa;
-}
-
-.file-item .file-icon {
-  width: 25px;
-  font-size: 20px;
-  text-align: center;
-}
-
-.file-item .file-name {
-  flex: 1;
-  overflow-wrap: anywhere;
-}
-
-.file-item .file-info {
-  color: #888;
-  font-size: 12px;
-}
-
-.file-item .delete-file {
-  border: none;
-  background: transparent;
-  color: #c44;
-  cursor: pointer;
-  padding: 5px;
-}
-
-.file-item .delete-file:hover {
-  background: #ffe5e5;
-  border-radius: 5px;
-}
-
-/* アイコン表示のファイルカード */
 .file-list.icon-view .file-item {
-  flex-direction: column;
-  align-items: flex-start;
-  border: 1px solid #eee;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  width: 140px !important;
+  min-height: 140px !important;
+  padding: 10px !important;
+  background: #fff !important;
+  border: 1px solid #e5e5e5 !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  cursor: pointer;
 }
 
+.file-list.icon-view .file-item:hover {
+  background: #f9f9f9 !important;
+}
+
+.file-list.icon-view .file-item.selected {
+  background: #f0f4fb !important;
+  border-color: #4a77d4 !important;
+}
+
+/* 左上のチェックボックス */
+.file-list.icon-view .file-item input[type="checkbox"] {
+  margin-bottom: 8px !important;
+  cursor: pointer !important;
+}
+
+/* 中央の絵文字アイコン */
 .file-list.icon-view .file-item .file-icon {
-  font-size: 28px;
+  font-size: 32px !important;
+  width: 100% !important;
+  text-align: left !important;
+  margin-bottom: 8px !important;
+}
+
+/* ファイル名 */
+.file-list.icon-view .file-item .file-name {
+  font-size: 0.8rem !important;
+  color: #333 !important;
+  word-break: break-all !important;
+  margin-bottom: 12px !important;
+}
+
+/* 赤文字の削除ボタン */
+.file-list.icon-view .file-item .delete-file {
+  border: none !important;
+  background: transparent !important;
+  color: #d9534f !important;
+  font-size: 0.8rem !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+}
+
+.file-list.icon-view .file-item .delete-file:hover {
+  text-decoration: underline !important;
 }
 
 /* ツリー表示 */
@@ -283,7 +277,6 @@ body {
   padding-bottom: 5px;
 }
 
-/* 空のとき */
 .empty-message {
   color: #999;
   font-size: 13px;
@@ -320,7 +313,6 @@ body {
   background: #f6f4ff;
 }
 
-/* ===== お気に入り ===== */
 .favorite-star {
   color: #d5a52b;
   cursor: pointer;
@@ -339,7 +331,6 @@ body {
   cursor: pointer;
 }
 
-/* ===== その他の形式 ===== */
 .other-btn {
   width: 100%;
   padding: 14px;
@@ -353,7 +344,6 @@ body {
   background: #eeebfa;
 }
 
-/* ===== 変換ボタン ===== */
 .main-btn {
   width: 100%;
   padding: 16px;
@@ -376,7 +366,6 @@ body {
   cursor: not-allowed;
 }
 
-/* ===== ステータス ===== */
 #status {
   margin-top: 15px;
   color: #16845b;
@@ -384,7 +373,7 @@ body {
   overflow-wrap: anywhere;
 }
 
-/* ===== ダウンロード完了エリア（枠幅いっぱいに拡張） ===== */
+/* ===== ダウンロード完了エリア ===== */
 .result-area {
   display: flex !important;
   flex-direction: column !important;
@@ -429,7 +418,7 @@ body {
   background: #2c974b !important;
 }
 
-/* ===== スマートフォン（レスポンシブ） ===== */
+/* ===== レスポンシブ ===== */
 @media (max-width: 600px) {
   .container {
     margin: 15px auto;
@@ -457,10 +446,9 @@ body {
   }
 
   .file-list.icon-view {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
   }
 
-  /* 詳細表示の列 */
   .details-header {
     display: grid;
     grid-template-columns: 28px minmax(100px, 1fr) 150px 80px 120px 45px;
