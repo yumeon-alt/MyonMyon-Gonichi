@@ -64,11 +64,8 @@
             <button id="addFilesBtn" title="ファイルを追加">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             </button>
-            <button id="createFolderBtn" title="フォルダを作成">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z"/></svg>
-            </button>
-            <button id="downloadFilesBtn" title="選択したファイルをダウンロード">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            <button id="clearFilesBtn" title="すべてクリア">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
             </button>
           </div>
           <div class="toolbar-right">
@@ -77,9 +74,6 @@
             </button>
             <button class="view-btn" data-view="details" title="リスト表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M3 4h18v2H3zm0 7h18v2H3zm0 7h18v2H3z"/></svg>
-            </button>
-            <button class="view-btn" data-view="tree" title="ツリー表示">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h4v3z"/></svg>
             </button>
           </div>
         </div>
@@ -127,11 +121,11 @@
             </button>
           </div>
           <div class="toolbar-right">
-            <button id="pdfViewTextBtn" class="view-btn" title="リスト表示">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M3 4h18v2H3zm0 7h18v2H3zm0 7h18v2H3z"/></svg>
-            </button>
             <button id="pdfViewThumbBtn" class="view-btn active" title="画像表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
+            </button>
+            <button id="pdfViewTextBtn" class="view-btn" title="リスト表示">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M3 4h18v2H3zm0 7h18v2H3zm0 7h18v2H3z"/></svg>
             </button>
           </div>
         </div>
@@ -177,16 +171,22 @@
             <button id="zipAddBtn" title="ファイルを追加">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             </button>
+            <button id="zipCreateFolderBtn" title="フォルダを作成">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z"/></svg>
+            </button>
             <button id="zipClearBtn" title="すべてクリア">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
             </button>
           </div>
           <div class="toolbar-right">
+            <button id="zipViewThumbBtn" class="view-btn active" title="アイコン表示">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
+            </button>
             <button id="zipViewTextBtn" class="view-btn" title="リスト表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M3 4h18v2H3zm0 7h18v2H3zm0 7h18v2H3z"/></svg>
             </button>
-            <button id="zipViewThumbBtn" class="view-btn active" title="画像表示">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
+            <button id="zipViewTreeBtn" class="view-btn" title="ツリー表示">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h4v3z"/></svg>
             </button>
           </div>
         </div>

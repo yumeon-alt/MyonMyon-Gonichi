@@ -4,13 +4,10 @@
   const fileInput = document.getElementById("fileInput");
   const fileList = document.getElementById("fileList");
   const addFilesBtn = document.getElementById("addFilesBtn");
-  const createFolderBtn = document.getElementById("createFolderBtn");
-  const downloadFilesBtn = document.getElementById("downloadFilesBtn");
+  const clearFilesBtn = document.getElementById("clearFilesBtn");
   const filePath = document.getElementById("filePath");
 
   let managedFiles = [];
-  let folders = [];
-  let currentFolder = null;
   let currentView = "icons";
   let nextId = 1;
 
@@ -46,6 +43,15 @@
     fileInput.addEventListener("change", () => {
       addManagedFiles(Array.from(fileInput.files));
       fileInput.value = "";
+    });
+  }
+
+  // ★ すべてクリアボタンのイベントハンドラ
+  if (clearFilesBtn) {
+    clearFilesBtn.addEventListener("click", () => {
+      managedFiles = [];
+      renderFileList();
+      notifyApp();
     });
   }
 
@@ -91,7 +97,6 @@
         managedFiles.push({
           id: nextId++,
           file,
-          folderId: currentFolder,
           selected: false
         });
       }
@@ -109,54 +114,17 @@
     );
   }
 
-  if (createFolderBtn) {
-    createFolderBtn.addEventListener("click", () => {
-      const name = prompt("新しいフォルダ名を入力してください。");
-      if (!name || !name.trim()) return;
-      folders.push({ id: nextId++, name: name.trim(), parentId: currentFolder });
-      renderFileList();
-    });
-  }
-
-  function openFolder(id) {
-    currentFolder = id;
-    renderFileList();
-  }
-
-  function updateFolderPath() {
-    if (!filePath) return;
-    const names = [];
-    let id = currentFolder;
-    while (id !== null) {
-      const folder = folders.find(item => item.id === id);
-      if (!folder) break;
-      names.unshift(folder.name);
-      id = folder.parentId;
-    }
-    filePath.textContent = "📁 ファイル" + (names.length ? " / " + names.join(" / ") : "");
-  }
-
   function renderFileList() {
     if (!fileList) return;
-    updateFolderPath();
+    if (filePath) filePath.textContent = "📁 ファイル";
 
     fileList.innerHTML = "";
     fileList.className = "file-list";
 
     if (currentView === "icons") fileList.classList.add("icon-view");
     if (currentView === "details") fileList.classList.add("details-view");
-    if (currentView === "tree") fileList.classList.add("tree-view");
 
-    if (currentView === "tree") {
-      fileList.classList.add("has-files");
-      renderTree(null, 0);
-      return;
-    }
-
-    const currentFolders = folders.filter(f => f.parentId === currentFolder);
-    const currentFiles = managedFiles.filter(item => item.folderId === currentFolder);
-
-    if (currentFolders.length === 0 && currentFiles.length === 0) {
+    if (managedFiles.length === 0) {
       fileList.classList.remove("has-files");
       const empty = document.createElement("div");
       empty.className = "drop-empty";
@@ -189,53 +157,9 @@
       fileList.appendChild(header);
     }
 
-    currentFolders.forEach(folder => {
-      const row = document.createElement("div");
-      row.className = "file-item folder-item";
-      row.innerHTML = `
-        <span class="file-icon">📁</span>
-        <span class="file-name">${escapeHTML(folder.name)}</span>
-        <button class="delete-file" title="フォルダを削除">削除</button>
-      `;
-      row.querySelector(".file-name").addEventListener("click", (e) => { e.stopPropagation(); openFolder(folder.id); });
-      row.querySelector(".file-icon").addEventListener("click", (e) => { e.stopPropagation(); openFolder(folder.id); });
-      row.querySelector(".delete-file").addEventListener("click", event => { event.stopPropagation(); deleteFolder(folder.id); });
-      fileList.appendChild(row);
-    });
-
-    currentFiles.forEach(item => {
+    managedFiles.forEach(item => {
       fileList.appendChild(createFileRow(item));
     });
-  }
-
-  function renderTree(parentId, depth) {
-    const childFolders = folders.filter(folder => folder.parentId === parentId);
-    childFolders.forEach(folder => {
-      const row = document.createElement("div");
-      row.className = "file-item folder-item";
-      row.style.paddingLeft = (10 + depth * 22) + "px";
-      row.innerHTML = `
-        <span class="file-icon">📁</span>
-        <span class="file-name">${escapeHTML(folder.name)}</span>
-      `;
-      row.querySelector(".file-name").addEventListener("click", (e) => { e.stopPropagation(); openFolder(folder.id); });
-      row.querySelector(".file-icon").addEventListener("click", (e) => { e.stopPropagation(); openFolder(folder.id); });
-      fileList.appendChild(row);
-
-      managedFiles.filter(item => item.folderId === folder.id).forEach(item => {
-        const fileRow = createFileRow(item);
-        fileRow.style.paddingLeft = (32 + depth * 22) + "px";
-        fileList.appendChild(fileRow);
-      });
-
-      renderTree(folder.id, depth + 1);
-    });
-
-    if (parentId === null) {
-      managedFiles.filter(item => item.folderId === null).forEach(item => {
-        fileList.appendChild(createFileRow(item));
-      });
-    }
   }
 
   function createFileRow(item) {
@@ -300,74 +224,17 @@
     notifyApp();
   }
 
-  function deleteFolder(id) {
-    if (!confirm("このフォルダと中のファイルを削除しますか？")) return;
-    const removeFolderIds = [id];
-    for (let i = 0; i < removeFolderIds.length; i++) {
-      const parentId = removeFolderIds[i];
-      folders.filter(folder => folder.parentId === parentId).forEach(folder => removeFolderIds.push(folder.id));
-    }
-    folders = folders.filter(folder => !removeFolderIds.includes(folder.id));
-    managedFiles = managedFiles.filter(item => !removeFolderIds.includes(item.folderId));
-    if (removeFolderIds.includes(currentFolder)) currentFolder = null;
-    renderFileList();
-    notifyApp();
-  }
-
-  if (downloadFilesBtn) {
-    downloadFilesBtn.addEventListener("click", async () => {
-      const selected = managedFiles.filter(item => item.selected);
-      if (selected.length === 0) {
-        alert("ダウンロードするファイルを選択してください。");
-        return;
-      }
-      if (selected.length === 1) {
-        downloadBlob(selected[0].file, selected[0].file.name);
-        return;
-      }
-      if (!window.JSZip) {
-        alert("ZIPライブラリを読み込めません。");
-        return;
-      }
-      const zip = new JSZip();
-      selected.forEach((item, index) => {
-        let filename = item.file.name;
-        if (zip.file(filename)) {
-          const dot = filename.lastIndexOf(".");
-          const base = dot > 0 ? filename.slice(0, dot) : filename;
-          const ext = dot > 0 ? filename.slice(dot) : "";
-          filename = `${base}_${index + 1}${ext}`;
-        }
-        zip.file(filename, item.file);
-      });
-      const blob = await zip.generateAsync({ type: "blob" });
-      downloadBlob(blob, "files.zip");
-    });
-  }
-
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-  document.querySelectorAll(".view-btn").forEach(button => {
+  document.querySelectorAll("#convert .view-btn").forEach(button => {
     button.addEventListener("click", () => {
       if (!button.dataset.view) return;
       currentView = button.dataset.view;
-      document.querySelectorAll(".view-btn").forEach(btn => {
+      document.querySelectorAll("#convert .view-btn").forEach(btn => {
         btn.classList.toggle("active", btn === button);
       });
       renderFileList();
     });
   });
 
-  // ファイル変換成功時に選択されていたファイルを自動クリアするイベントリスナー
   window.addEventListener("file-studio-clear-converted-files", event => {
     if (event.detail && event.detail.convertedFiles) {
       const convertedFiles = event.detail.convertedFiles;
