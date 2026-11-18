@@ -99,6 +99,7 @@ function initAuthSystem() {
       const email = $("authEmail").value.trim();
       const password = $("authPassword").value;
       
+      // メールアドレスの簡単な形式チェック
       if (!email || !email.includes("@")) {
         alert("正しいメールアドレスを入力してください。");
         return;
@@ -123,10 +124,12 @@ function initAuthSystem() {
       const email = $("authEmail").value.trim();
       const password = $("authPassword").value;
       
+      // メールアドレスの形式チェック
       if (!email || !email.includes("@")) {
         alert("正しいメールアドレスを入力してください。");
         return;
       }
+      // パスワードの文字数チェック（6文字以上）
       if (!password || password.length < 6) {
         alert("パスワードは6文字以上にしてください。");
         return;
@@ -206,7 +209,7 @@ window.saveUserHistory = async function(actionType, details) {
   if (!auth || !db) return;
 
   const user = auth.currentUser;
-  if (!user) return; // 未ログイン時は保存しない
+  if (!user) return;
 
   try {
     const { collection, addDoc, serverTimestamp } = window.firebaseFirestoreFns;
@@ -252,75 +255,33 @@ function renderHistoryList(histories) {
 
   listEl.innerHTML = "";
   if (histories.length === 0) {
-    listEl.innerHTML = "<li style='color: #888; padding: 8px;'>履歴はまだありません。</li>";
+    listEl.innerHTML = "<li style='color: #888; padding: 6px 8px;'>履歴はまだありません。</li>";
     return;
   }
 
   histories.forEach(item => {
     const li = document.createElement("li");
-    li.style.padding = "10px 12px";
-    li.style.background = "#f8f9fa";
-    li.style.border = "1px solid #e1e4e8";
-    li.style.borderRadius = "8px";
+    li.style.padding = "8px";
+    li.style.borderBottom = "1px solid #f0f0f0";
     li.style.display = "flex";
     li.style.justifyContent = "space-between";
     li.style.alignItems = "center";
-    li.style.gap = "10px";
     
     const dateStr = item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : "同期中...";
     const typeLabel = item.actionType === "image-convert" ? "🖼️ 変換" : item.actionType === "pdf-editor" ? "📕 PDF編集" : "📦 ZIP圧縮";
     
-    // ファイル名の取得
-    const fileName = item.details?.fileName || item.details?.outputName || "ファイル";
-
-    const leftDiv = document.createElement("div");
-    leftDiv.style.display = "flex";
-    leftDiv.style.flexDirection = "column";
-    leftDiv.style.gap = "2px";
-
-    const typeSpan = document.createElement("span");
-    typeSpan.style.fontSize = "0.75rem";
-    typeSpan.style.color = "#666";
-    typeSpan.textContent = `${dateStr} ｜ ${typeLabel}`;
-
-    const nameSpan = document.createElement("span");
-    nameSpan.style.fontWeight = "bold";
-    nameSpan.style.fontSize = "0.95rem";
-    nameSpan.style.color = "#252535";
-    nameSpan.textContent = fileName;
-
-    leftDiv.append(typeSpan, nameSpan);
-
-    const rightDiv = document.createElement("div");
-    rightDiv.style.display = "flex";
-    rightDiv.style.gap = "8px";
-    rightDiv.style.alignItems = "center";
-
-    // ダウンロードボタン
-    const downloadBtn = document.createElement("button");
-    downloadBtn.textContent = "ダウンロード";
-    downloadBtn.style.padding = "4px 10px";
-    downloadBtn.style.background = "#2ea44f";
-    downloadBtn.style.color = "#fff";
-    downloadBtn.style.border = "none";
-    downloadBtn.style.borderRadius = "4px";
-    downloadBtn.style.cursor = "pointer";
-    downloadBtn.style.fontSize = "0.8rem";
-
-    downloadBtn.addEventListener("click", () => {
-      alert(`「${fileName}」の履歴情報です。ファイルの実データは変換時に自動保存されたブラウザのダウンロードフォルダをご確認ください。`);
-    });
-
-    // 削除ボタン
+    const textSpan = document.createElement("span");
+    textSpan.textContent = `[${dateStr}] ${typeLabel}: ${JSON.stringify(item.details)}`;
+    
+    // 個別の履歴を削除するボタン
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "削除";
-    deleteBtn.style.padding = "4px 10px";
-    deleteBtn.style.background = "#fff";
-    deleteBtn.style.border = "1px solid #d73a49";
+    deleteBtn.style.background = "none";
+    deleteBtn.style.border = "none";
     deleteBtn.style.color = "#d73a49";
-    deleteBtn.style.borderRadius = "4px";
     deleteBtn.style.cursor = "pointer";
     deleteBtn.style.fontSize = "0.8rem";
+    deleteBtn.style.marginLeft = "10px";
 
     deleteBtn.addEventListener("click", async () => {
       try {
@@ -336,8 +297,7 @@ function renderHistoryList(histories) {
       }
     });
 
-    rightDiv.append(downloadBtn, deleteBtn);
-    li.append(leftDiv, rightDiv);
+    li.append(textSpan, deleteBtn);
     listEl.appendChild(li);
   });
 }
@@ -345,7 +305,7 @@ function renderHistoryList(histories) {
 function clearHistoryUI() {
   const listEl = $("history-list");
   if (listEl) {
-    listEl.innerHTML = "<li style='color: #888; padding: 8px;'>ログインすると履歴が表示されます。</li>";
+    listEl.innerHTML = "<li style='color: #888; padding: 6px 8px;'>ログインすると履歴が表示されます。</li>";
   }
 }
 
@@ -538,7 +498,7 @@ if ($("convertBtn")) {
     }
 
     if (!selectedFormat) {
-      setStatus("変換などの操作を行ってください。", true);
+      setStatus("変換先の形式を選択してください。", true);
       return;
     }
 
@@ -571,7 +531,6 @@ if ($("convertBtn")) {
         success++;
         successfulFiles.push(file);
         
-        // Firestoreへの履歴保存
         if (typeof window.saveUserHistory === "function") {
           await window.saveUserHistory("image-convert", { fileName: outputName, format: selectedFormat });
         }
