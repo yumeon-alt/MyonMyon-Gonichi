@@ -28,11 +28,11 @@
     );
   }
 
-  // ファイルの種類に応じた画像アイコンのHTMLを返す関数（デフォルト・その他は file.png）
+  // ★ margin-top を 8px に変更して上部に余白を確保
   function getFileIconHtml(file) {
     const ext = file.name.split(".").pop().toLowerCase();
     
-    let imgPath = "images/file.png"; // デフォルト
+    let imgPath = "images/hatena.png";
     let label = "ファイル";
 
     if (["png"].includes(ext)) {
@@ -41,9 +41,6 @@
     } else if (["jpg", "jpeg"].includes(ext)) {
       imgPath = "images/jpg.png";
       label = "JPEG画像";
-    } else if (["gif", "webp", "bmp", "svg", "avif", "tif", "tiff"].includes(ext)) {
-      imgPath = "images/image.png";
-      label = "画像";
     } else if (ext === "pdf") {
       imgPath = "images/pdf.png";
       label = "PDF";
@@ -52,7 +49,7 @@
       label = "ZIP";
     }
 
-    return `<div style="text-align: center; margin-top: -12px; margin-bottom: 0;"><img src="${imgPath}" width="128" height="128" style="display: inline-block; object-fit: contain;" alt="${label}"></div>`;
+    return `<div style="text-align: center; margin-top: 8px; margin-bottom: 0;"><img src="${imgPath}" width="128" height="128" style="display: inline-block; object-fit: contain;" alt="${label}"></div>`;
   }
 
   if (addFilesBtn && fileInput) {
@@ -112,8 +109,7 @@
       if (!alreadyExists) {
         managedFiles.push({
           id: nextId++,
-          file,
-          selected: false
+          file
         });
       }
     });
@@ -183,21 +179,12 @@
   function createFileRow(item) {
     const row = document.createElement("div");
     row.className = "file-item";
-    if (item.selected) row.classList.add("selected");
 
     if (currentView === "details") {
       row.style.display = "flex";
       row.style.alignItems = "center";
       row.style.justifyContent = "space-between";
     }
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = item.selected;
-    checkbox.addEventListener("change", () => {
-      item.selected = checkbox.checked;
-      renderFileList();
-    });
 
     const icon = document.createElement("span");
     icon.className = "file-icon";
@@ -246,13 +233,7 @@
       deleteFile(item.id);
     });
 
-    row.addEventListener("click", event => {
-      if (event.target === checkbox || event.target === deleteButton) return;
-      item.selected = !item.selected;
-      renderFileList();
-    });
-
-    row.append(checkbox, icon, name, info, deleteButton);
+    row.append(icon, name, info, deleteButton);
     return row;
   }
 

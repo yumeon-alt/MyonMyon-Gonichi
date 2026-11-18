@@ -203,7 +203,7 @@ body {
   height: 100%;
 }
 
-/* ===== Moodle風 カード表示（スクショ完全一致版） ===== */
+/* ===== ファイル変換（元のデザインを完全復元） & PDF編集へ共通適用 ===== */
 .file-list.has-files.icon-view {
   display: flex !important;
   flex-wrap: wrap !important;
@@ -211,7 +211,8 @@ body {
   padding: 12px !important;
 }
 
-.file-list.icon-view .file-item {
+.file-list.icon-view .file-item,
+.pdf-page-item-card {
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
@@ -227,7 +228,8 @@ body {
   cursor: pointer;
 }
 
-.file-list.icon-view .file-item:hover {
+.file-list.icon-view .file-item:hover,
+.pdf-page-item-card:hover {
   background: #f9f9f9 !important;
 }
 
@@ -242,89 +244,54 @@ body {
   cursor: pointer !important;
 }
 
-/* 中央の絵文字アイコン */
-.file-list.icon-view .file-item .file-icon {
-  font-size: 32px !important;
+/* 中央のアイコン表示領域（ファイル変換元のサイズ） */
+.file-list.icon-view .file-item .file-icon,
+.pdf-page-item-card .file-icon,
+.pdf-page-item-card .thumb-wrapper {
   width: 100% !important;
-  text-align: left !important;
   margin-bottom: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
 }
 
-/* ファイル名 */
-.file-list.icon-view .file-item .file-name {
+.file-list.icon-view .file-item .file-icon img,
+.pdf-page-item-card .thumb-wrapper img {
+  max-width: 100% !important;
+  max-height: 70px !important;
+  object-fit: contain !important;
+  pointer-events: none;
+}
+
+/* ファイル名表示（ファイル変換元のデザイン） */
+.file-list.icon-view .file-item .file-name,
+.pdf-page-item-card .file-name {
   font-size: 0.8rem !important;
   color: #333 !important;
   word-break: break-all !important;
   margin-bottom: 12px !important;
+  line-height: 1.2 !important;
+  width: 100%;
+  
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
 }
 
-/* 赤文字の削除ボタン */
-.file-list.icon-view .file-item .delete-file {
-  border: none !important;
-  background: transparent !important;
-  color: #d9534f !important;
-  font-size: 0.8rem !important;
-  cursor: pointer !important;
-  padding: 0 !important;
-}
-
-.file-list.icon-view .file-item .delete-file:hover {
-  text-decoration: underline !important;
-}
-
-/* ツリー表示 */
-.file-list.tree-view .file-item {
-  padding-top: 5px;
-  padding-bottom: 5px;
-}
-
-.empty-message {
-  color: #999;
-  font-size: 13px;
-  padding: 15px;
-  text-align: center;
-}
-
-/* ===== PDF編集アイテム表示のファイル変換デザイン統合 ===== */
-#pdfDropZone {
-  position: relative;
-}
-
-/* サムネイル（画像表示）時のカードアイテム */
-.pdf-page-item-card {
+/* PDF編集の操作領域（ボトム配置） */
+.pdf-page-item-card .ctrl-area {
   display: flex !important;
-  flex-direction: column !important;
   align-items: center !important;
   justify-content: space-between !important;
-  width: 140px !important;
-  min-height: 160px !important;
-  padding: 10px !important;
-  background: #fff !important;
-  border: 1px solid #e5e5e5 !important;
-  border-radius: 6px !important;
-  box-sizing: border-box !important;
-  position: relative !important;
-  cursor: grab;
+  width: 100% !important;
+  margin-top: auto !important;
 }
 
-.pdf-page-item-card:hover {
-  background: #f9f9f9 !important;
-}
-
-.pdf-page-item-card img {
-  max-width: 100%;
-  max-height: 90px;
-  object-fit: contain;
-  border-radius: 4px;
-  border: 1px solid #eee;
-  pointer-events: none;
-}
-
-/* 操作ボタン群 */
-.pdf-page-item-card .ctrl-area {
+.pdf-page-item-card .ctrl-area .move-btns {
   display: flex;
   gap: 4px;
-  margin-top: 8px;
 }
 
 .pdf-page-item-card .ctrl-area button {
@@ -340,13 +307,32 @@ body {
   background: #e2f5fb;
 }
 
-.pdf-page-item-card .ctrl-area button.del-btn {
-  color: #d9534f;
-  border-color: #f5c6cb;
+/* 赤文字の削除ボタン（ファイル変換元デザイン） */
+.file-list.icon-view .file-item .delete-file,
+.pdf-page-item-card .delete-file,
+.pdf-page-item-card .ctrl-area button.delete-file {
+  border: none !important;
+  background: transparent !important;
+  color: #d9534f !important;
+  font-size: 0.8rem !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
-.pdf-page-item-card .ctrl-area button.del-btn:hover {
-  background: #f8d7da;
+.file-list.icon-view .file-item .delete-file:hover,
+.pdf-page-item-card .delete-file:hover,
+.pdf-page-item-card .ctrl-area button.delete-file:hover {
+  text-decoration: underline !important;
+  background: transparent !important;
+}
+
+/* 空メッセージ */
+.empty-message {
+  color: #999;
+  font-size: 13px;
+  padding: 15px;
+  text-align: center;
 }
 
 /* ===== 形式一覧 ===== */

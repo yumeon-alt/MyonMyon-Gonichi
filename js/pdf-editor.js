@@ -17,7 +17,7 @@
   const pdfViewThumbBtn = document.getElementById("pdfViewThumbBtn");
   const pdfResultArea = document.getElementById("pdfResultArea");
   const pdfDownloadBtn = document.getElementById("pdfDownloadBtn");
-  const pdfPath = document.getElementById("pdfPath"); // ★ パス表示用要素を取得
+  const pdfPath = document.getElementById("pdfPath");
 
   let pdfPages = [];
   let currentViewMode = "thumb";
@@ -32,36 +32,6 @@
     pdfStatus.style.color = isError ? "#d94848" : "#16845b";
   }
 
-  function getFileIconHtml(file) {
-    let ext = "pdf";
-    if (file && file.name) {
-      ext = file.name.split(".").pop().toLowerCase();
-    }
-    
-    let imgPath = "images/hatena.png";
-    let label = "ファイル";
-
-    if (["png"].includes(ext)) {
-      imgPath = "images/image.png";
-      label = "PNG画像";
-    } else if (["jpg", "jpeg"].includes(ext)) {
-      imgPath = "images/jpg.png";
-      label = "JPEG画像";
-    } else if (["gif", "webp", "bmp", "svg", "avif", "tif", "tiff"].includes(ext)) {
-      imgPath = "images/image.png";
-      label = "画像";
-    } else if (ext === "pdf") {
-      imgPath = "images/pdf.png";
-      label = "PDF";
-    } else if (["zip", "rar", "7z"].includes(ext)) {
-      imgPath = "images/zip.png";
-      label = "ZIP";
-    }
-
-    return `<div style="text-align: center; margin-top: -12px; margin-bottom: 0;"><img src="${imgPath}" width="128" height="128" style="display: inline-block; object-fit: contain;" alt="${label}"></div>`;
-  }
-
-  // ★ フォルダアイコン（file.png）を表示する関数
   function updatePdfPath() {
     if (!pdfPath) return;
     pdfPath.innerHTML = `<img src="images/file.png" width="16" height="16" style="vertical-align: middle; margin-right: 4px; object-fit: contain;" alt="フォルダ">PDF構成ページ`;
@@ -167,6 +137,9 @@
   async function processIncomingFiles(files) {
     setPdfStatus("ファイルを解析・読み込み中...");
 
+    let successCount = 0;
+    let failCount = 0;
+
     for (const file of files) {
       const ext = file.name.split(".").pop().toLowerCase();
       const baseName = file.name.replace(/\.[^.]+$/, "");
@@ -191,30 +164,45 @@
               pdfBytes: singlePdfBytes,
               thumbUrl: thumbUrl
             });
+            successCount++;
           }
         } else {
-          const imgUrl = URL.createObjectURL(file);
-          
           if (!window.ImageConverter) {
             throw new Error("画像変換ライブラリが利用できません。");
           }
+
+          setPdfStatus(`${file.name} をPDFに変換中...`);
           const pdfBlob = await window.ImageConverter.convert(file, "pdf");
           const pdfBytes = new Uint8Array(await pdfBlob.arrayBuffer());
+
+          let thumbUrl = "";
+          try {
+            thumbUrl = await generateThumbnailUrl(pdfBytes);
+          } catch (tErr) {
+            thumbUrl = "";
+          }
 
           pdfPages.push({
             id: uniquePageId++,
             displayName: `${baseName}-1.pdf`,
             pdfBytes: pdfBytes,
-            thumbUrl: imgUrl
+            thumbUrl: thumbUrl
           });
+          successCount++;
         }
       } catch (err) {
         console.error("読み込みエラー:", err);
-        setPdfStatus(`${file.name} の読み込みに失敗しました。`, true);
+        failCount++;
+        setPdfStatus(`${file.name} の読み込みに失敗しました: ${err.message}`, true);
       }
     }
 
-    setPdfStatus(`全 ${pdfPages.length} ページを読み込みました。`);
+    if (failCount === 0) {
+      setPdfStatus(`全 ${pdfPages.length} ページを読み込みました。`);
+    } else if (successCount > 0) {
+      setPdfStatus(`${successCount} ページを読み込みました（${failCount} 個のファイルが失敗）。`, true);
+    }
+
     renderPdfPages();
   }
 
@@ -247,7 +235,7 @@
 
   function renderPdfPages() {
     updatePdfExportBtnState();
-    updatePdfPath(); // ★ 描画時にパスのアイコンを更新
+    updatePdfPath();
 
     if (!pdfDropZone) return;
 
@@ -290,14 +278,15 @@
 
         setupDragEvents(card, index, "thumb", pdfDropZone);
 
+        const thumbWrapper = document.createElement("div");
+        thumbWrapper.className = "thumb-wrapper";
+
         if (page.thumbUrl) {
           const img = document.createElement("img");
           img.src = page.thumbUrl;
-          card.appendChild(img);
+          thumbWrapper.appendChild(img);
         } else {
-          const iconDiv = document.createElement("div");
-          iconDiv.innerHTML = `<div style="text-align: center; margin-top: -12px; margin-bottom: 0;"><img src="images/pdf.png" width="128" height="128" style="display: inline-block; object-fit: contain;" alt="PDF"></div>`;
-          card.appendChild(iconDiv);
+          thumbWrapper.innerHTML = `<img src="images/pdf.png" style="width: 48px; height: 48px; object-fit: contain;" alt="PDF">`;
         }
 
         const nameSpan = document.createElement("span");
@@ -307,6 +296,9 @@
 
         const ctrlArea = document.createElement("div");
         ctrlArea.className = "ctrl-area";
+
+        const moveBtns = document.createElement("div");
+        moveBtns.className = "move-btns";
 
         const upBtn = document.createElement("button");
         upBtn.textContent = "◀";
@@ -326,17 +318,19 @@
           movePage(index, index + 1);
         });
 
+        moveBtns.append(upBtn, downBtn);
+
         const delBtn = document.createElement("button");
-        delBtn.textContent = "✕";
-        delBtn.className = "del-btn";
+        delBtn.textContent = "削除";
+        delBtn.className = "delete-file";
         delBtn.title = "削除";
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           removePage(index);
         });
 
-        ctrlArea.append(upBtn, downBtn, delBtn);
-        card.append(nameSpan, ctrlArea);
+        ctrlArea.append(moveBtns, delBtn);
+        card.append(thumbWrapper, nameSpan, ctrlArea);
         pdfDropZone.appendChild(card);
       });
 
@@ -494,7 +488,7 @@
 
     if (mode === "thumb") {
       guide.style.width = "4px";
-      guide.style.height = "160px";
+      guide.style.height = "140px";
       guide.style.margin = "0 -6px";
     } else {
       guide.style.width = "100%";
