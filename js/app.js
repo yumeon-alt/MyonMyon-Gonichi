@@ -335,15 +335,25 @@ function renderHistoryList(histories) {
       textSpan.textContent = `[${dateStr}] ${typeLabel}: ${JSON.stringify(item.details)}`;
     }
 
+    // ★ ドロップ枠内のファイル削除ボタンと統一したデザイン（赤テキスト・ホバー下線）
     const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "🗑️";
-    deleteBtn.style.background = "none";
+    deleteBtn.textContent = "削除";
+    deleteBtn.className = "delete-file";
+    deleteBtn.title = "履歴を削除";
     deleteBtn.style.border = "none";
-    deleteBtn.style.color = "#d73a49";
+    deleteBtn.style.background = "transparent";
+    deleteBtn.style.color = "#d9534f";
+    deleteBtn.style.fontSize = "0.8rem";
     deleteBtn.style.cursor = "pointer";
-    deleteBtn.style.fontSize = "0.9rem";
+    deleteBtn.style.padding = "0";
     deleteBtn.style.marginLeft = "10px";
-    deleteBtn.title = "削除";
+
+    deleteBtn.addEventListener("mouseenter", () => {
+      deleteBtn.style.textDecoration = "underline";
+    });
+    deleteBtn.addEventListener("mouseleave", () => {
+      deleteBtn.style.textDecoration = "none";
+    });
 
     deleteBtn.addEventListener("click", async () => {
       try {
@@ -626,7 +636,7 @@ if ($("convertBtn")) {
       }
     }
 
-    // ★ 変換成功時に画面上のファイル一覧を自動クリアするイベントを送信
+    // 変換成功時に画面上のファイル一覧を自動クリアするイベントを送信
     if (successfulFiles.length > 0) {
       window.dispatchEvent(
         new CustomEvent("file-studio-clear-converted-files", {

@@ -50,6 +50,13 @@
     }
   }
 
+  // ★ ボタンの非活性/活性状態を更新する関数
+  function updateZipBtnState() {
+    if (zipBtn) {
+      zipBtn.disabled = zipFiles.length === 0;
+    }
+  }
+
   if (zipViewTextBtn && zipViewThumbBtn) {
     zipViewTextBtn.addEventListener("click", () => {
       currentViewMode = "text";
@@ -137,6 +144,8 @@
   }
 
   function renderZipFiles() {
+    updateZipBtnState(); // ★ 表示更新に合わせてボタン状態を更新
+
     if (!zipDropZone) return;
 
     const existingInput = zipDropZone.querySelector("#zipInput");
