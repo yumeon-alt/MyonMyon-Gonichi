@@ -648,6 +648,13 @@ if ($("convertBtn")) {
 
     if (errors.length === 0) {
       setStatus(`${success}個のファイルを変換しました！`);
+      
+      // 変換成功時に外部ストレージ連携エリアを表示する
+      const resultArea = $("convertResultArea");
+      if (resultArea) {
+        resultArea.style.display = "flex";
+        resultArea.classList.remove("hidden");
+      }
     } else {
       setStatus(
         `${success}個成功、${errors.length}個失敗。\n${errors.join("\n")}`,
