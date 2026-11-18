@@ -31,36 +31,6 @@
     pdfStatus.style.color = isError ? "#d94848" : "#16845b";
   }
 
-  // ファイルの種類に応じた画像アイコンのHTMLを返す関数（128x128サイズ・上部余白詰め）
-  function getFileIconHtml(file) {
-    let ext = "pdf";
-    if (file && file.name) {
-      ext = file.name.split(".").pop().toLowerCase();
-    }
-    
-    let imgPath = "images/hatena.png"; // デフォルト
-    let label = "ファイル";
-
-    if (["png"].includes(ext)) {
-      imgPath = "images/image.png";
-      label = "PNG画像";
-    } else if (["jpg", "jpeg"].includes(ext)) {
-      imgPath = "images/jpg.png";
-      label = "JPEG画像";
-    } else if (["gif", "webp", "bmp", "svg", "avif", "tif", "tiff"].includes(ext)) {
-      imgPath = "images/image.png";
-      label = "画像";
-    } else if (ext === "pdf") {
-      imgPath = "images/pdf.png";
-      label = "PDF";
-    } else if (["zip", "rar", "7z"].includes(ext)) {
-      imgPath = "images/zip.png";
-      label = "ZIP";
-    }
-
-    return `<div style="text-align: center; margin-top: -12px; margin-bottom: 0;"><img src="${imgPath}" width="128" height="128" style="display: inline-block; object-fit: contain;" alt="${label}"></div>`;
-  }
-
   function hidePdfResult() {
     generatedPdfBlob = null;
     if (pdfResultArea) {
@@ -184,8 +154,7 @@
               id: uniquePageId++,
               displayName: `${baseName}-${i + 1}.pdf`,
               pdfBytes: singlePdfBytes,
-              thumbUrl: thumbUrl,
-              originalFile: file
+              thumbUrl: thumbUrl
             });
           }
         } else {
@@ -201,8 +170,7 @@
             id: uniquePageId++,
             displayName: `${baseName}-1.pdf`,
             pdfBytes: pdfBytes,
-            thumbUrl: imgUrl,
-            originalFile: file
+            thumbUrl: imgUrl
           });
         }
       } catch (err) {
@@ -243,7 +211,7 @@
   }
 
   function renderPdfPages() {
-    updatePdfExportBtnState();
+    updatePdfExportBtnState(); // ★ 表示更新に合わせてボタン状態を更新
 
     if (!pdfDropZone) return;
 
@@ -291,9 +259,10 @@
           img.src = page.thumbUrl;
           card.appendChild(img);
         } else {
-          const iconDiv = document.createElement("div");
-          iconDiv.innerHTML = getFileIconHtml(page.originalFile);
-          card.appendChild(iconDiv);
+          const icon = document.createElement("span");
+          icon.style.fontSize = "32px";
+          icon.textContent = "📕";
+          card.appendChild(icon);
         }
 
         const nameSpan = document.createElement("span");
@@ -337,42 +306,32 @@
       });
 
     } else {
-      // リスト表示（textモード）: ファイル名の右側にボタン群を横並び配置
       pdfPages.forEach((page, index) => {
         const row = document.createElement("div");
         row.className = "file-item";
         row.dataset.index = index;
         row.draggable = true;
-        // 横並びにして右側にボタンを配置するためのレイアウト調整
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.justifyContent = "space-between";
         row.style.cursor = "grab";
 
         setupDragEvents(row, index, "text", pdfDropZone);
 
         const icon = document.createElement("span");
         icon.className = "file-icon";
-        icon.style.display = "none"; // アイコン非表示
+        icon.style.pointerEvents = "none";
+        icon.textContent = "📕";
 
         const name = document.createElement("span");
         name.className = "file-name";
-        name.style.flexGrow = "1";
-        name.style.overflow = "hidden";
-        name.style.textOverflow = "ellipsis";
-        name.style.whiteSpace = "nowrap";
-        name.style.marginRight = "10px";
         name.style.pointerEvents = "none";
         name.textContent = page.displayName;
 
         const ctrlArea = document.createElement("div");
         ctrlArea.style.display = "flex";
-        ctrlArea.style.gap = "6px";
-        ctrlArea.style.flexShrink = "0";
+        ctrlArea.style.gap = "4px";
 
         const upBtn = document.createElement("button");
         upBtn.textContent = "▲ 上へ";
-        upBtn.style.padding = "4px 10px";
+        upBtn.style.padding = "3px 8px";
         upBtn.disabled = index === 0;
         upBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -381,7 +340,7 @@
 
         const downBtn = document.createElement("button");
         downBtn.textContent = "▼ 下へ";
-        downBtn.style.padding = "4px 10px";
+        downBtn.style.padding = "3px 8px";
         downBtn.disabled = index === pdfPages.length - 1;
         downBtn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -391,7 +350,6 @@
         const delBtn = document.createElement("button");
         delBtn.className = "delete-file";
         delBtn.textContent = "削除";
-        delBtn.style.padding = "4px 10px";
         delBtn.addEventListener("click", (e) => {
           e.stopPropagation();
           removePage(index);
