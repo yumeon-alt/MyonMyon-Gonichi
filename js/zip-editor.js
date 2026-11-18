@@ -36,7 +36,7 @@
   function getFileIconHtml(file) {
     const ext = file.name.split(".").pop().toLowerCase();
     
-    let imgPath = "images/?.png"; // デフォルト（HEICやその他）
+    let imgPath = "images/hatena.png"; // デフォルト
     let label = "ファイル";
 
     if (["png"].includes(ext)) {
@@ -542,9 +542,10 @@
       row.draggable = true;
       setupItemDragEvents(row, { type: "file", id: item.id });
 
+      // リスト表示（textモード）ではアイコンを表示しないように空にする
       const icon = document.createElement("span");
       icon.className = "file-icon";
-      icon.innerHTML = getFileIconHtml(item.file);
+      icon.innerHTML = "";
       icon.style.pointerEvents = "none";
 
       const name = document.createElement("span");
