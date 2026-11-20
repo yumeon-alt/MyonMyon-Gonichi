@@ -12,13 +12,14 @@
 
   <header class="header">
     <div class="logo">
-      <img src="images/logo.png" alt="PD子とZIヤ" class="logo-img">
+      <!-- 題名位置の画像表示（ファイル名に合わせて変更してください） -->
+      <img src="images/PDZI_.jpg" alt="PD7とZIや" class="logo-img">
     </div>
     <div style="display: flex; gap: 10px; align-items: center;">
       <button id="authModalOpenBtn" style="padding: 6px 14px; background: #eeedf8; border: 1px solid #6559bb; color: #6559bb; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">
         <span id="auth-status-text">未ログイン</span>
       </button>
-      <button id="settingsBtn" class="settings-btn">⚙</button>
+      <button id="settingsBtn" class="settings-btn" data-tooltip="設定">⚙</button>
     </div>
   </header>
 
@@ -63,18 +64,18 @@
       <div class="file-manager">
         <div class="file-toolbar">
           <div class="toolbar-left">
-            <button id="addFilesBtn" title="ファイルを追加">
+            <button id="addFilesBtn" data-tooltip="ファイルを追加">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             </button>
-            <button id="clearFilesBtn" title="すべてクリア">
+            <button id="clearFilesBtn" data-tooltip="すべてクリア">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
             </button>
           </div>
           <div class="toolbar-right">
-            <button class="view-btn active" data-view="icons" title="アイコン表示">
+            <button class="view-btn active" data-view="icons" data-tooltip="アイコン表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
             </button>
-            <button class="view-btn" data-view="details" title="リスト表示">
+            <button class="view-btn" data-view="details" data-tooltip="リスト表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M3 4h18v2H3zm0 7h18v2H3zm0 7h18v2H3z"/></svg>
             </button>
           </div>
@@ -87,10 +88,12 @@
 
       <div id="fileName" hidden></div>
 
-      <h3>★ お気に入り</h3>
+      <!-- 動的変換形式エリア -->
+      <h3 id="formatSectionTitle">変換可能な形式</h3>
       <div id="favoriteFormats" class="format-grid"></div>
 
-      <button id="otherBtn" class="other-btn">その他の形式を見る ▼</button>
+      <!-- アコーディオントグルボタン -->
+      <button id="otherBtn" class="other-btn">対応入力形式を見る ▼</button>
       <div id="otherFormats" class="format-grid hidden"></div>
 
       <button id="convertBtn" class="main-btn" disabled>変換する</button>
@@ -115,18 +118,18 @@
       <div class="file-manager">
         <div class="file-toolbar">
           <div class="toolbar-left">
-            <button id="pdfAddBtn" title="ファイルを追加">
+            <button id="pdfAddBtn" data-tooltip="ファイルを追加">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             </button>
-            <button id="pdfClearBtn" title="すべてクリア">
+            <button id="pdfClearBtn" data-tooltip="すべてクリア">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
             </button>
           </div>
           <div class="toolbar-right">
-            <button id="pdfViewThumbBtn" class="view-btn active" title="アイコン表示">
+            <button id="pdfViewThumbBtn" class="view-btn active" data-tooltip="画像表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
             </button>
-            <button id="pdfViewTextBtn" class="view-btn" title="リスト表示">
+            <button id="pdfViewTextBtn" class="view-btn" data-tooltip="リスト表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M3 4h18v2H3zm0 7h18v2H3zm0 7h18v2H3z"/></svg>
             </button>
           </div>
@@ -170,21 +173,21 @@
       <div class="file-manager">
         <div class="file-toolbar">
           <div class="toolbar-left">
-            <button id="zipAddBtn" title="ファイルを追加">
+            <button id="zipAddBtn" data-tooltip="ファイルを追加">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             </button>
-            <button id="zipCreateFolderBtn" title="フォルダを作成">
+            <button id="zipCreateFolderBtn" data-tooltip="フォルダを作成">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 8h-3v3h-2v-3h-3v-2h3V9h2v3h3v2z"/></svg>
             </button>
-            <button id="zipClearBtn" title="すべてクリア">
+            <button id="zipClearBtn" data-tooltip="すべてクリア">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
             </button>
           </div>
           <div class="toolbar-right">
-            <button id="zipViewThumbBtn" class="view-btn active" title="アイコン表示">
+            <button id="zipViewThumbBtn" class="view-btn active" data-tooltip="アイコン表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>
             </button>
-            <button id="zipViewTextBtn" class="view-btn" title="リスト表示">
+            <button id="zipViewTextBtn" class="view-btn" data-tooltip="リスト表示">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#333"><path d="M3 4h18v2H3zm0 7h18v2H3zm0 7h18v2H3z"/></svg>
             </button>
           </div>
@@ -219,14 +222,8 @@
 
       <div id="zipStatus" style="margin-top: 15px; color: #555;"></div>
     </section>
-    
-    <!-- 4. お気に入り設定セクション -->
-    <section id="settings" class="page hidden">
-      <h1>お気に入り設定</h1>
-      <div id="favoriteSettings"></div>
-    </section>
 
-    <!-- 5. 操作履歴セクション -->
+    <!-- 4. 操作履歴セクション -->
     <div id="history-section" class="hidden" style="background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top: 30px; margin-bottom: 25px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <h3 style="margin: 0; font-size: 1.1rem;">📋 操作履歴（ファイル名・ダウンロード・同期）</h3>

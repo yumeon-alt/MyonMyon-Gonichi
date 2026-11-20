@@ -2,39 +2,22 @@
 
 const $ = id => document.getElementById(id);
 
-const formats = [
-  "jpg", "png", "gif",
-  "webp", "bmp", "tiff", "svg",
-  "ico", "raw", "avif", "heic", "pdf"
+// アプリがサポートする全形式
+const allFormats = [
+  "jpg", "png", "gif", "webp", "bmp", 
+  "tiff", "svg", "ico", "raw", "avif", "heic", "pdf"
 ];
 
-const defaultFavorites = ["jpg", "png", "webp", "pdf"];
+// 形式ごとの対応変換先マップ
+const conversionMap = {
+  // 画像全般の主要変換先
+  image: ["jpg", "png", "webp", "pdf", "gif", "bmp", "tiff", "ico", "avif", "svg"],
+  // PDFからの主要変換先
+  pdf: ["jpg", "png", "webp"]
+};
 
-let savedFavorites;
-
-try {
-  savedFavorites = JSON.parse(
-    localStorage.getItem("fileStudioFavorites") || "null"
-  );
-} catch {
-  savedFavorites = null;
-}
-
-let favorites = savedFavorites
-  ? [...new Set(
-      savedFavorites.map(format =>
-        format === "jpeg" ? "jpg" : format
-      )
-    )].filter(format => formats.includes(format))
-  : [...defaultFavorites];
-
+let currentInputFiles = [];
 let selectedFormat = null;
-let selectedFiles = [];
-
-localStorage.setItem(
-  "fileStudioFavorites",
-  JSON.stringify(favorites)
-);
 
 // モーダル開閉イベント
 function initModalEvents() {
@@ -65,648 +48,208 @@ function initModalEvents() {
 
 initModalEvents();
 
-// Firebase 認証 & 履歴管理の初期化待機
-const checkInterval = setInterval(() => {
-  if (window.firebaseAuth && window.firebaseDb) {
-    clearInterval(checkInterval);
-    initAuthSystem();
-    initGigafileHandlers();
-  }
-}, 100);
+// タブ切り替え処理
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+    
+    tab.classList.add("active");
+    const targetPage = $(tab.dataset.page);
+    if (targetPage) {
+      targetPage.classList.remove("hidden");
+      targetPage.classList.add("active");
+    }
+  });
+});
 
-function initAuthSystem() {
-  const auth = window.firebaseAuth;
-  const db = window.firebaseDb;
-  const { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } = window.firebaseAuthFns;
-
-  const authStatusText = $("auth-status-text");
-  const loginBtn = $("loginBtn");
-  const registerBtn = $("registerBtn");
-  const logoutBtn = $("logoutBtn");
-  const loggedOutView = $("auth-logged-out-view");
-  const loggedInView = $("auth-logged-in-view");
-  const userEmailDisplay = $("user-email-display");
-  const historySection = $("history-section");
-  const authModal = $("authModal");
-
-  if (loginBtn) {
-    loginBtn.addEventListener("click", async () => {
-      const email = $("authEmail").value.trim();
-      const password = $("authPassword").value;
-      
-      if (!email || !email.includes("@")) {
-        alert("正しいメールアドレスを入力してください。");
-        return;
-      }
-      if (!password) {
-        alert("パスワードを入力してください。");
-        return;
-      }
-
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        alert("ログインしました！");
-        if (authModal) authModal.style.display = "none";
-      } catch (err) {
-        alert("ログインエラー: " + err.message);
-      }
-    });
-  }
-
-  if (registerBtn) {
-    registerBtn.addEventListener("click", async () => {
-      const email = $("authEmail").value.trim();
-      const password = $("authPassword").value;
-      
-      if (!email || !email.includes("@")) {
-        alert("正しいメールアドレスを入力してください。");
-        return;
-      }
-      if (!password || password.length < 6) {
-        alert("パスワードは6文字以上にしてください。");
-        return;
-      }
-
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert("アカウントを作成し、ログインしました！");
-        if (authModal) authModal.style.display = "none";
-      } catch (err) {
-        alert("登録エラー: " + err.message);
-      }
-    });
-  }
-
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      try {
-        await signOut(auth);
-        alert("ログアウトしました。");
-        if (authModal) authModal.style.display = "none";
-      } catch (err) {
-        console.error("ログアウト失敗", err);
-      }
-    });
-  }
-
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      if (loggedOutView) loggedOutView.style.display = "none";
-      if (loggedInView) loggedInView.style.display = "flex";
-      if (userEmailDisplay) userEmailDisplay.textContent = user.email;
-      if (authStatusText) authStatusText.textContent = user.email;
-      
-      if (historySection) historySection.classList.remove("hidden");
-
-      loadUserHistories(user.uid);
+// その他の形式（アコーディオン）トグルボタン
+const otherBtn = $("otherBtn");
+const otherFormatsGrid = $("otherFormats");
+if (otherBtn && otherFormatsGrid) {
+  otherBtn.addEventListener("click", () => {
+    const isHidden = otherFormatsGrid.classList.contains("hidden");
+    if (isHidden) {
+      otherFormatsGrid.classList.remove("hidden");
+      const currentText = otherBtn.textContent.replace(" ▼", "");
+      otherBtn.textContent = currentText + " ▲";
     } else {
-      if (loggedOutView) loggedOutView.style.display = "block";
-      if (loggedInView) loggedInView.style.display = "none";
-      if (authStatusText) authStatusText.textContent = "未ログイン";
-      
-      if (historySection) historySection.classList.add("hidden");
-
-      clearHistoryUI();
+      otherFormatsGrid.classList.add("hidden");
+      const currentText = otherBtn.textContent.replace(" ▲", "");
+      otherBtn.textContent = currentText + " ▼";
     }
-  });
-
-  const clearHistoryBtn = $("clearHistoryBtn");
-  if (clearHistoryBtn) {
-    clearHistoryBtn.addEventListener("click", async () => {
-      const user = auth.currentUser;
-      if (!user) return;
-      if (!confirm("本当にすべての履歴を削除しますか？")) return;
-
-      try {
-        const { collection, query, where, getDocs, deleteDoc, doc } = window.firebaseFirestoreFns;
-        const q = query(collection(db, "histories"), where("uid", "==", user.uid));
-        const snapshot = await getDocs(q);
-        
-        const deletePromises = snapshot.docs.map(document => deleteDoc(doc(db, "histories", document.id)));
-        await Promise.all(deletePromises);
-
-        loadUserHistories(user.uid);
-      } catch (err) {
-        console.error("履歴の削除に失敗しました:", err);
-      }
-    });
-  }
-}
-
-function initGigafileHandlers() {
-  const setupHandler = (type, getFileNameFn) => {
-    const openBtn = $(`openGigafileBtn-${type}`);
-    const saveBtn = $(`saveGigafileBtn-${type}`);
-    const urlInput = $(`gigafileUrl-${type}`);
-
-    if (openBtn) {
-      openBtn.addEventListener('click', () => {
-        window.open('https://gigafile.nu/', '_blank');
-      });
-    }
-
-    if (saveBtn && urlInput) {
-      saveBtn.addEventListener('click', async () => {
-        const url = urlInput.value.trim();
-        if (!url) {
-          alert('ギガファイル便のURLを入力してください。');
-          return;
-        }
-
-        const auth = window.firebaseAuth;
-        const db = window.firebaseDb;
-        if (!auth || !auth.currentUser || !db) {
-          alert('履歴に保存するにはログインが必要です。');
-          return;
-        }
-
-        const fileName = getFileNameFn();
-        const actionType = type === 'convert' ? 'image-convert' : type === 'pdf' ? 'pdf-editor' : 'zip-compression';
-
-        try {
-          const { collection, addDoc, serverTimestamp } = window.firebaseFirestoreFns;
-          await addDoc(collection(db, "histories"), {
-            uid: auth.currentUser.uid,
-            actionType: actionType,
-            details: { fileName: fileName, gigafileUrl: url },
-            createdAt: serverTimestamp()
-          });
-
-          alert('ギガファイル便のリンクを履歴に保存しました！');
-          urlInput.value = '';
-          loadUserHistories(auth.currentUser.uid);
-        } catch (err) {
-          console.error("ギガファイル便リンクの保存エラー:", err);
-          alert('保存に失敗しました。');
-        }
-      });
-    }
-  };
-
-  setupHandler('convert', () => {
-    const fnElem = $('fileName');
-    return fnElem && fnElem.textContent ? fnElem.textContent : "変換ファイル";
-  });
-
-  setupHandler('pdf', () => {
-    const outName = $('pdfOutputName');
-    return outName ? outName.value : "merged.pdf";
-  });
-
-  setupHandler('zip', () => {
-    const zName = $('zipName');
-    return zName ? zName.value : "archive.zip";
   });
 }
 
-window.saveUserHistory = async function(actionType, details) {
-  const auth = window.firebaseAuth;
-  const db = window.firebaseDb;
-  if (!auth || !db) return;
+// 動的な変換形式グリッド描画
+function renderDynamicFormats(inputFiles) {
+  const favoriteFormatsGrid = $("favoriteFormats");
+  const otherFormatsGrid = $("otherFormats");
+  const otherBtn = $("otherBtn");
+  const formatSectionTitle = $("formatSectionTitle");
+  const convertBtn = $("convertBtn");
 
-  const user = auth.currentUser;
-  if (!user) return;
+  if (!favoriteFormatsGrid || !otherFormatsGrid || !otherBtn) return;
 
-  try {
-    const { collection, addDoc, serverTimestamp } = window.firebaseFirestoreFns;
-    await addDoc(collection(db, "histories"), {
-      uid: user.uid,
-      actionType: actionType, 
-      details: details,       
-      createdAt: serverTimestamp()
+  favoriteFormatsGrid.innerHTML = "";
+  otherFormatsGrid.innerHTML = "";
+
+  // 1. ファイルが入っていない時
+  if (!inputFiles || inputFiles.length === 0) {
+    selectedFormat = null;
+    if (convertBtn) convertBtn.disabled = true;
+    if (formatSectionTitle) formatSectionTitle.textContent = "変換可能な形式";
+
+    otherBtn.textContent = "対応入力形式を見る ▼";
+    if (!otherFormatsGrid.classList.contains("hidden")) {
+      otherBtn.textContent = "対応入力形式を見る ▲";
+    }
+
+    const emptyMsg = document.createElement("div");
+    emptyMsg.className = "empty-message";
+    emptyMsg.style.cssText = "grid-column: 1 / -1; color: #888; padding: 20px; text-align: center; background: #f9f9fc; border-radius: 8px;";
+    emptyMsg.textContent = "ファイルを上のエリアに追加すると、対応する変換形式がここに自動表示されます。";
+    favoriteFormatsGrid.appendChild(emptyMsg);
+
+    // 非折りたたみに対応全形式を参考カードとして描画（すべて非選択状態）
+    allFormats.forEach(fmt => {
+      const btn = document.createElement("button");
+      btn.className = "format-button";
+      btn.textContent = fmt.toUpperCase();
+      btn.disabled = true;
+      otherFormatsGrid.appendChild(btn);
     });
-    loadUserHistories(user.uid);
-  } catch (err) {
-    console.error("履歴の保存に失敗しました:", err);
-  }
-};
-
-async function loadUserHistories(uid) {
-  const db = window.firebaseDb;
-  if (!db) return;
-
-  try {
-    const { collection, query, where, orderBy, getDocs } = window.firebaseFirestoreFns;
-    const q = query(
-      collection(db, "histories"),
-      where("uid", "==", uid),
-      orderBy("createdAt", "desc")
-    );
-
-    const snapshot = await getDocs(q);
-    const histories = [];
-    snapshot.forEach(docSnap => {
-      histories.push({ id: docSnap.id, ...docSnap.data() });
-    });
-
-    renderHistoryList(histories);
-  } catch (err) {
-    console.error("履歴の取得エラー:", err);
-  }
-}
-
-// 履歴リスト描画（変換先拡張子に応じたアイコン切り替え版）
-function renderHistoryList(histories) {
-  const listEl = $("history-list");
-  if (!listEl) return;
-
-  listEl.innerHTML = "";
-  if (histories.length === 0) {
-    listEl.innerHTML = "<li style='color: #888; padding: 6px 8px;'>履歴はまだありません。</li>";
     return;
   }
 
-  // 履歴のファイル形式やアクションから適切なアイコン画像を判定する関数
-  function getHistoryIconHtml(item) {
-    let imgPath = "images/?.png";
-    let label = "操作";
-
-    if (item.actionType === "zip-compression") {
-      imgPath = "images/zip.png";
-      label = "ZIP圧縮";
-    } else if (item.actionType === "pdf-editor") {
-      imgPath = "images/pdf.png";
-      label = "PDF編集";
-    } else if (item.actionType === "image-convert") {
-      label = "変換";
-      // 変換先のフォーマット（details.format または details.fileName から拡張子を抽出）
-      const format = item.details?.format?.toLowerCase() || 
-                     (item.details?.fileName ? item.details.fileName.split(".").pop().toLowerCase() : "");
-
-      if (format === "png") {
-        imgPath = "images/image.png";
-      } else if (["jpg", "jpeg"].includes(format)) {
-        imgPath = "images/jpg.png";
-      } else if (format === "pdf") {
-        imgPath = "images/pdf.png";
-      } else if (["zip", "rar", "7z"].includes(format)) {
-        imgPath = "images/zip.png";
-      } else {
-        imgPath = "images/image.png";
-      }
-    }
-
-    return {
-      html: `<img src="${imgPath}" width="20" height="20" style="vertical-align: middle; margin-right: 4px;" alt="${label}">`,
-      label: label
-    };
+  // 2. ファイルが入っている時
+  if (formatSectionTitle) formatSectionTitle.textContent = "変換先を選択";
+  otherBtn.textContent = "その他の形式を見る ▼";
+  if (!otherFormatsGrid.classList.contains("hidden")) {
+    otherBtn.textContent = "その他の形式を見る ▲";
   }
 
-  histories.forEach(item => {
-    const li = document.createElement("li");
-    li.style.padding = "8px";
-    li.style.borderBottom = "1px solid #f0f0f0";
-    li.style.display = "flex";
-    li.style.justifyContent = "space-between";
-    li.style.alignItems = "center";
-    
-    const dateStr = item.createdAt?.toDate ? item.createdAt.toDate().toLocaleString() : "同期中...";
-    
-    // 拡張子に応じたアイコン情報を取得
-    const iconInfo = getHistoryIconHtml(item);
+  // 入力ファイル群の拡張子から変換可能形式を抽出
+  let allowedFormats = new Set();
+  let isAllPdf = true;
 
-    const textSpan = document.createElement("span");
-    let rightAreaHtml = "";
+  inputFiles.forEach(file => {
+    const ext = file.name.split(".").pop().toLowerCase();
+    if (ext !== "pdf") isAllPdf = false;
     
-    if (item.details && item.details.gigafileUrl) {
-      textSpan.innerHTML = `[${dateStr}] ${iconInfo.html}${iconInfo.label}: ${item.details.fileName || "ファイル"} (ギガファイル便共有)`;
-      rightAreaHtml = `<a href="${item.details.gigafileUrl}" target="_blank" style="padding: 4px 10px; background: #2ea44f; color: #fff; text-decoration: none; border-radius: 4px; font-size: 0.8rem; font-weight: bold; margin-left: 10px;">📤 ギガファイル便を開く</a>`;
+    if (ext === "pdf") {
+      conversionMap.pdf.forEach(f => allowedFormats.add(f));
     } else {
-      textSpan.innerHTML = `[${dateStr}] ${iconInfo.html}${iconInfo.label}: ${JSON.stringify(item.details)}`;
+      conversionMap.image.forEach(f => allowedFormats.add(f));
     }
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "削除";
-    deleteBtn.className = "delete-file";
-    deleteBtn.title = "履歴を削除";
-    deleteBtn.style.border = "none";
-    deleteBtn.style.background = "transparent";
-    deleteBtn.style.color = "#d9534f";
-    deleteBtn.style.fontSize = "0.8rem";
-    deleteBtn.style.cursor = "pointer";
-    deleteBtn.style.padding = "0";
-    deleteBtn.style.marginLeft = "10px";
-
-    deleteBtn.addEventListener("mouseenter", () => {
-      deleteBtn.style.textDecoration = "underline";
-    });
-    deleteBtn.addEventListener("mouseleave", () => {
-      deleteBtn.style.textDecoration = "none";
-    });
-
-    deleteBtn.addEventListener("click", async () => {
-      try {
-        const db = window.firebaseDb;
-        const { deleteDoc, doc } = window.firebaseFirestoreFns;
-        await deleteDoc(doc(db, "histories", item.id));
-        const auth = window.firebaseAuth;
-        if (auth.currentUser) {
-          loadUserHistories(auth.currentUser.uid);
-        }
-      } catch (err) {
-        console.error("履歴項目の削除エラー:", err);
-      }
-    });
-
-    const leftContainer = document.createElement("div");
-    leftContainer.style.display = "flex";
-    leftContainer.style.alignItems = "center";
-    leftContainer.style.overflow = "hidden";
-    leftContainer.style.textOverflow = "ellipsis";
-    leftContainer.style.whiteSpace = "nowrap";
-    leftContainer.style.marginRight = "10px";
-    leftContainer.appendChild(textSpan);
-
-    const rightContainer = document.createElement("div");
-    rightContainer.style.display = "flex";
-    rightContainer.style.alignItems = "center";
-    rightContainer.style.flexShrink = "0";
-    
-    if (rightAreaHtml) {
-      const tempDiv = document.createElement("div");
-      tempDiv.innerHTML = rightAreaHtml;
-      rightContainer.appendChild(tempDiv.firstElementChild);
-    }
-    rightContainer.appendChild(deleteBtn);
-
-    li.append(leftContainer, rightContainer);
-    listEl.appendChild(li);
   });
-}
 
-function clearHistoryUI() {
-  const listEl = $("history-list");
-  if (listEl) {
-    listEl.innerHTML = "<li style='color: #888; padding: 6px 8px;'>ログインすると履歴が表示されます。</li>";
+  const supportedArray = Array.from(allowedFormats);
+
+  // おすすめ形式（最初の4つまでメインエリアに表示）
+  const primaryFormats = supportedArray.slice(0, 4);
+  const secondaryFormats = allFormats.filter(fmt => !primaryFormats.includes(fmt));
+
+  // メインエリア描画
+  primaryFormats.forEach(fmt => {
+    const btn = document.createElement("button");
+    btn.className = "format-button";
+    if (selectedFormat === fmt) btn.classList.add("selected");
+    btn.textContent = fmt.toUpperCase();
+
+    btn.addEventListener("click", () => {
+      selectedFormat = fmt;
+      renderDynamicFormats(inputFiles);
+      if (convertBtn) convertBtn.disabled = false;
+    });
+
+    favoriteFormatsGrid.appendChild(btn);
+  });
+
+  // その他の形式エリア描画（非対応のものは disabled ）
+  secondaryFormats.forEach(fmt => {
+    const btn = document.createElement("button");
+    btn.className = "format-button";
+    btn.textContent = fmt.toUpperCase();
+
+    const isSupported = supportedArray.includes(fmt);
+    if (!isSupported) {
+      btn.disabled = true;
+    } else {
+      if (selectedFormat === fmt) btn.classList.add("selected");
+      btn.addEventListener("click", () => {
+        selectedFormat = fmt;
+        renderDynamicFormats(inputFiles);
+        if (convertBtn) convertBtn.disabled = false;
+      });
+    }
+
+    otherFormatsGrid.appendChild(btn);
+  });
+
+  // 選択されていた形式が非対応になった場合のリセット
+  if (selectedFormat && !supportedArray.includes(selectedFormat)) {
+    selectedFormat = null;
+    if (convertBtn) convertBtn.disabled = true;
   }
 }
 
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    showPage(tab.dataset.page);
-  });
+// ファイル管理スクリプト（file-manager.js）からの変更通知イベント受信
+window.addEventListener("file-studio-files-changed", (e) => {
+  currentInputFiles = e.detail.files || [];
+  renderDynamicFormats(currentInputFiles);
 });
 
-function showPage(page) {
-  document.querySelectorAll(".page").forEach(element => {
-    element.classList.remove("active");
-    element.classList.add("hidden");
-  });
+// 変換ボタン押下イベント
+const convertBtn = $("convertBtn");
+const statusDiv = $("status");
 
-  const target = $(page);
-  if (target) {
-    target.classList.remove("hidden");
-    target.classList.add("active");
-  }
-
-  document.querySelectorAll(".tab").forEach(tab => {
-    tab.classList.toggle("active", tab.dataset.page === page);
-  });
-}
-
-if ($("settingsBtn")) {
-  $("settingsBtn").addEventListener("click", () => {
-    showPage("settings");
-    renderSettings();
-  });
-}
-
-function setStatus(message = "", isError = false) {
-  const status = $("status");
-  if (!status) return;
-
-  status.textContent = message;
-  status.style.color = isError ? "#d94848" : "#16845b";
-}
-
-function updateConvertButtonState() {
-  const convertBtn = $("convertBtn");
-  if (convertBtn) {
-    convertBtn.disabled = !(selectedFiles.length > 0 && selectedFormat !== null);
-  }
-}
-
-function displayFiles(files) {
-  selectedFiles = Array.from(files);
-
-  const nameArea = $("fileName");
-  if (nameArea) {
-    nameArea.textContent = selectedFiles.length
-      ? selectedFiles.map(file => file.name).join("、")
-      : "ファイルが選択されていません";
-  }
-
-  updateConvertButtonState();
-  if (selectedFiles.length === 0) {
-    setStatus();
-  }
-}
-
-window.addEventListener("file-studio-files-changed", event => {
-  if (event.detail && event.detail.files) {
-    displayFiles(event.detail.files);
-  }
-});
-
-function saveFavorites() {
-  localStorage.setItem(
-    "fileStudioFavorites",
-    JSON.stringify(favorites)
-  );
-
-  renderFormats();
-  renderSettings();
-}
-
-function createFormatButton(format) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "format-button";
-
-  if (selectedFormat === format) {
-    button.classList.add("selected");
-  }
-
-  const name = document.createElement("span");
-  name.textContent = format.toUpperCase();
-
-  const star = document.createElement("span");
-  star.className = "favorite-star";
-  star.textContent = favorites.includes(format) ? "★" : "☆";
-
-  star.addEventListener("click", event => {
-    event.stopPropagation();
-    if (favorites.includes(format)) {
-      favorites = favorites.filter(item => item !== format);
-    } else {
-      favorites.push(format);
-    }
-    saveFavorites();
-  });
-
-  button.append(name, star);
-
-  button.addEventListener("click", () => {
-    selectedFormat = format;
-    renderFormats();
-    updateConvertButtonState();
-  });
-
-  return button;
-}
-
-function renderFormats() {
-  const favoriteArea = $("favoriteFormats");
-  const otherArea = $("otherFormats");
-
-  if (!favoriteArea || !otherArea) return;
-
-  favoriteArea.innerHTML = "";
-  otherArea.innerHTML = "";
-
-  favorites.forEach(format => {
-    favoriteArea.appendChild(createFormatButton(format));
-  });
-
-  formats
-    .filter(format => !favorites.includes(format))
-    .forEach(format => {
-      otherArea.appendChild(createFormatButton(format));
-    });
-}
-
-if ($("otherBtn")) {
-  $("otherBtn").addEventListener("click", () => {
-    const area = $("otherFormats");
-    const isHidden = area.hidden || area.classList.contains("hidden");
-
-    area.hidden = !isHidden;
-    area.classList.toggle("hidden", !isHidden);
-
-    $("otherBtn").textContent = isHidden
-      ? "その他の形式を閉じる ▲"
-      : "その他の形式を見る ▼";
-  });
-}
-
-function renderSettings() {
-  const area = $("favoriteSettings");
-  if (!area) return;
-
-  area.innerHTML = "";
-
-  formats.forEach(format => {
-    const label = document.createElement("label");
-    label.className = "setting-format";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = favorites.includes(format);
-
-    checkbox.addEventListener("change", () => {
-      if (checkbox.checked) {
-        if (!favorites.includes(format)) {
-          favorites.push(format);
-        }
-      } else {
-        favorites = favorites.filter(item => item !== format);
-      }
-      saveFavorites();
-    });
-
-    const text = document.createElement("span");
-    text.textContent = format.toUpperCase();
-
-    label.append(checkbox, text);
-    area.appendChild(label);
-  });
-}
-
-if ($("convertBtn")) {
-  $("convertBtn").addEventListener("click", async () => {
-    if (selectedFiles.length === 0) {
-      setStatus("ファイルを選択してください。", true);
-      return;
-    }
-
-    if (!selectedFormat) {
-      setStatus("変換先の形式を選択してください。", true);
+if (convertBtn) {
+  convertBtn.addEventListener("click", async () => {
+    if (!currentInputFiles || currentInputFiles.length === 0 || !selectedFormat) {
+      alert("ファイルと変換先形式を選択してください。");
       return;
     }
 
     if (!window.ImageConverter) {
-      setStatus("変換プログラムが読み込まれていません。", true);
+      alert("画像変換ライブラリが利用できません。");
       return;
     }
 
-    const button = $("convertBtn");
-    button.disabled = true;
+    convertBtn.disabled = true;
+    if (statusDiv) statusDiv.textContent = "ファイルを変換中...";
 
-    let success = 0;
-    const errors = [];
-    const successfulFiles = [];
+    let successCount = 0;
+    const convertedFilesList = [];
 
-    setStatus("変換しています...");
-
-    for (const file of selectedFiles) {
+    for (const fileObj of currentInputFiles) {
       try {
-        const blob = await window.ImageConverter.convert(
-          file,
-          selectedFormat
-        );
-
-        const originalName = file.name.replace(/\.[^.]+$/, "");
-        const outputName = `${originalName}.${selectedFormat}`;
-
-        window.ImageConverter.download(blob, outputName);
-
-        success++;
-        successfulFiles.push(file);
+        const blob = await window.ImageConverter.convert(fileObj, selectedFormat);
+        const baseName = fileObj.name.replace(/\.[^.]+$/, "");
+        const outName = `${baseName}.${selectedFormat}`;
         
-        if (typeof window.saveUserHistory === "function") {
-          await window.saveUserHistory("image-convert", { fileName: outputName, format: selectedFormat });
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-      } catch (error) {
-        console.error("変換エラー:", error);
-        errors.push(`${file.name}: ${error.message}`);
+        window.ImageConverter.download(blob, outName);
+        convertedFilesList.push(fileObj);
+        successCount++;
+      } catch (err) {
+        console.error("変換エラー:", err);
       }
     }
 
-    if (successfulFiles.length > 0) {
-      window.dispatchEvent(
-        new CustomEvent("file-studio-clear-converted-files", {
-          detail: { convertedFiles: successfulFiles }
-        })
-      );
+    if (statusDiv) {
+      statusDiv.textContent = `${successCount}個のファイルを変換し、ダウンロードしました！`;
     }
 
-    button.disabled = false;
+    // 変換完了したファイルを管理リストからクリア
+    window.dispatchEvent(
+      new CustomEvent("file-studio-clear-converted-files", {
+        detail: { convertedFiles: convertedFilesList }
+      })
+    );
 
-    if (errors.length === 0) {
-      setStatus(`${success}個のファイルを変換しました！`);
-      
-      const resultArea = $("convertResultArea");
-      if (resultArea) {
-        resultArea.style.display = "flex";
-        resultArea.classList.remove("hidden");
-      }
-    } else {
-      setStatus(
-        `${success}個成功、${errors.length}個失敗。\n${errors.join("\n")}`,
-        true
-      );
-    }
+    convertBtn.disabled = false;
   });
 }
 
-renderFormats();
-renderSettings();
-updateConvertButtonState();
-
-if ($("otherFormats")) {
-  $("otherFormats").hidden = true;
-  $("otherFormats").classList.add("hidden");
-}
+// 初期状態の表示をセット
+renderDynamicFormats([]);

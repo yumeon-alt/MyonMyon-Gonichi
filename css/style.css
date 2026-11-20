@@ -27,11 +27,10 @@ body {
   height: 100%;
 }
 
-/* ロゴ画像のサイズ調整 */
 .logo-img {
-  height: 48px;            /* ヘッダー内に綺麗に収まる高さに設定 */
-  width: auto;             /* 縦横比を維持 */
-  max-width: 220px;        /* 横幅の最大制限 */
+  height: 48px;
+  width: auto;
+  max-width: 240px;
   object-fit: contain;
   vertical-align: middle;
 }
@@ -41,6 +40,49 @@ body {
   background: transparent;
   font-size: 25px;
   cursor: pointer;
+}
+
+/* ===== 即時表示ツールチップ（見切れ防止・上部表示版） ===== */
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: -36px;                 /* ボタンの真上に表示 */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(37, 37, 53, 0.92);
+  color: #fff;
+  padding: 5px 9px;
+  font-size: 0.75rem;
+  font-weight: normal;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.08s ease-in-out;
+  z-index: 9999;               /* 最前面に表示 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 端のボタン（ファイル追加・リスト表示等）のテキスト見切れ対策 */
+.toolbar-left button:first-child[data-tooltip]::after {
+  left: 0;
+  transform: translateX(0);   /* 左端のボタンは左寄せにして見切れ防止 */
+}
+
+.toolbar-right button:last-child[data-tooltip]::after {
+  left: auto;
+  right: 0;
+  transform: translateX(0);   /* 右端のボタンは右寄せにして見切れ防止 */
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* ===== メイン ===== */
@@ -209,7 +251,7 @@ body {
   height: 100%;
 }
 
-/* ===== ファイル変換（元のデザインを完全復元） & PDF編集へ共通適用 ===== */
+/* ===== 統一カード表示 ===== */
 .file-list.has-files.icon-view {
   display: flex !important;
   flex-wrap: wrap !important;
@@ -244,38 +286,35 @@ body {
   border-color: #4a77d4 !important;
 }
 
-/* 左上のチェックボックス */
-.file-list.icon-view .file-item input[type="checkbox"] {
-  margin-bottom: 8px !important;
-  cursor: pointer !important;
-}
-
-/* 中央のアイコン表示領域（ファイル変換元のサイズ） */
 .file-list.icon-view .file-item .file-icon,
 .pdf-page-item-card .file-icon,
 .pdf-page-item-card .thumb-wrapper {
   width: 100% !important;
-  margin-bottom: 8px !important;
+  height: 54px !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: flex-start !important;
+  justify-content: center !important;
+  margin-bottom: 4px !important;
+  overflow: hidden !important;
 }
 
 .file-list.icon-view .file-item .file-icon img,
-.pdf-page-item-card .thumb-wrapper img {
+.file-list.icon-view .file-item img,
+.pdf-page-item-card img {
   max-width: 100% !important;
-  max-height: 70px !important;
+  max-height: 54px !important;
+  width: auto !important;
+  height: auto !important;
   object-fit: contain !important;
   pointer-events: none;
 }
 
-/* ファイル名表示（ファイル変換元のデザイン） */
 .file-list.icon-view .file-item .file-name,
 .pdf-page-item-card .file-name {
   font-size: 0.8rem !important;
   color: #333 !important;
   word-break: break-all !important;
-  margin-bottom: 12px !important;
+  margin-bottom: 6px !important;
   line-height: 1.2 !important;
   width: 100%;
   
@@ -286,13 +325,13 @@ body {
   overflow: hidden !important;
 }
 
-/* PDF編集の操作領域（ボトム配置） */
 .pdf-page-item-card .ctrl-area {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
   width: 100% !important;
   margin-top: auto !important;
+  padding-top: 4px !important;
 }
 
 .pdf-page-item-card .ctrl-area .move-btns {
@@ -313,7 +352,6 @@ body {
   background: #e2f5fb;
 }
 
-/* 赤文字の削除ボタン（ファイル変換元デザイン） */
 .file-list.icon-view .file-item .delete-file,
 .pdf-page-item-card .delete-file,
 .pdf-page-item-card .ctrl-area button.delete-file {
@@ -333,7 +371,6 @@ body {
   background: transparent !important;
 }
 
-/* 空メッセージ */
 .empty-message {
   color: #999;
   font-size: 13px;
@@ -358,9 +395,10 @@ body {
   cursor: pointer;
   font-weight: bold;
   color: #252535;
+  text-align: center;
 }
 
-.format-button:hover {
+.format-button:hover:not(:disabled) {
   border-color: #6559bb;
 }
 
@@ -370,22 +408,12 @@ body {
   background: #f6f4ff;
 }
 
-.favorite-star {
-  color: #d5a52b;
-  cursor: pointer;
-  margin-left: 8px;
-  user-select: none;
-}
-
-.setting-format {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin: 8px;
-  padding: 10px;
-  background: #f7f6fc;
-  border-radius: 8px;
-  cursor: pointer;
+.format-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f0f0f4;
+  border-color: #eee;
+  color: #aaa;
 }
 
 .other-btn {
@@ -395,6 +423,8 @@ body {
   border: 1px solid #ddd;
   border-radius: 10px;
   cursor: pointer;
+  font-weight: bold;
+  color: #555;
 }
 
 .other-btn:hover {
@@ -504,60 +534,5 @@ body {
 
   .file-list.icon-view {
     gap: 8px !important;
-  }
-
-  .details-header {
-    display: grid;
-    grid-template-columns: 28px minmax(100px, 1fr) 150px 80px 120px 45px;
-    gap: 8px;
-    align-items: center;
-    padding: 8px 5px;
-    border-bottom: 1px solid #bbb;
-    color: #555;
-    font-size: 14px;
-  }
-
-  .file-list:not(.icon-view):not(.tree-view) .file-item {
-    display: grid;
-    grid-template-columns: 28px minmax(100px, 1fr) 150px 80px 120px 45px;
-    gap: 8px;
-    align-items: center;
-    min-height: 42px;
-    padding: 5px;
-    border-bottom: 1px solid #eee;
-  }
-
-  .file-list:not(.icon-view):not(.tree-view) .file-item .file-icon {
-    text-align: center;
-  }
-
-  .file-list:not(.icon-view):not(.tree-view) .file-item .file-name {
-    color: #1670c5;
-    overflow-wrap: anywhere;
-  }
-
-  .file-list:not(.icon-view):not(.tree-view) .file-item .file-info {
-    display: contents;
-    font-size: 13px;
-    color: #444;
-  }
-
-  .file-list:not(.icon-view):not(.tree-view) .file-item .file-info span {
-    overflow-wrap: anywhere;
-  }
-}
-
-@media (max-width: 700px) {
-  .details-header,
-  .file-list:not(.icon-view):not(.tree-view) .file-item {
-    grid-template-columns: 25px minmax(100px, 1fr) 80px;
-  }
-
-  .details-header span:nth-child(3),
-  .details-header span:nth-child(4),
-  .details-header span:nth-child(5),
-  .file-list:not(.icon-view):not(.tree-view) .file-item .file-info span:nth-child(2),
-  .file-list:not(.icon-view):not(.tree-view) .file-item .file-info span:nth-child(3) {
-    display: none;
   }
 }
